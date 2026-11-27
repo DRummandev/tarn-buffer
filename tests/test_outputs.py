@@ -17,15 +17,19 @@ from scraper.outputs import (
     append_history_if_changed,
     build_latest,
     build_status,
+    expand_history_m,
     format_display,
     format_display_per100,
     history_row,
+    history_semantic_key,
     latest_changed,
     make_quote,
     paper_units,
+    parse_history_row,
     per_dollar,
     write_json,
 )
+from scraper.run import compact_run_log
 from scraper.run import run_pipeline
 from scraper.selector import Candidate, CardState, select_card
 
@@ -107,6 +111,13 @@ class TestHistory(unittest.TestCase):
             )
             row1 = history_row(t=now1, baghdad=d1, source_values={"tg_kifah": 168800})
             self.assertTrue(append_history_if_changed(hdir, row1, now=now1))
+            # writer uses compact m keys; omits stale:false
+            written = json.loads(
+                (hdir / "2026-11-26.jsonl").read_text().splitlines()[0]
+            )
+            self.assertIn("k", written["m"])
+            self.assertNotIn("tg_kifah", written["m"])
+            self.assertNotIn("stale", written)
             # same semantic → no append
             now2 = _dt("2026-11-26T14:00:00+03:00")
             row2 = history_row(t=now2, baghdad=d1, source_values={"tg_kifah": 168800})
@@ -144,6 +155,87 @@ class TestHistory(unittest.TestCase):
             self.assertEqual(idx["first"], "2026-11-26")
             # past rows untouched
             self.assertEqual(len(lines), 2)
+
+    def test_parse_legacy_and_compact_history_shapes(self):
+        """Both mid-file shapes are intentional; consumers must accept both."""
+        legacy = {
+            "t": "2026-11-27T13:15:48.255537+03:00",
+            "p": "2026-11-26T13:55:19+03:00",
+            "v": 168800.0,
+            "s": "tg_kifah",
+            "stale": False,
+            "m": {
+                "dinarlive_erbil": 169400.0,
+                "info4iq": 169375.0,
+                "iraqsm": 169000.0,
+                "tg_dollariraqi": 169000.0,
+                "tg_kifah": 168800.0,
+            },
+        }
+        compact = {
+            "t": "2026-11-27T14:43:14+03:00",
+            "p": "2026-11-26T13:55:19+03:00",
+            "v": 168800,
+            "s": "tg_kifah",
+            "m": {"d": 169000, "e": 169400, "i": 169375, "k": 168800, "r": 168600},
+        }
+        pl = parse_history_row(legacy)
+        pc = parse_history_row(compact)
+        self.assertFalse(pl["stale"])
+        self.assertFalse(pc["stale"])  # omitted → False
+        self.assertEqual(pl["m"]["tg_kifah"], 168800.0)
+        self.assertEqual(pc["m"]["tg_kifah"], 168800)
+        self.assertEqual(pc["m"]["iraqsm"], 168600)
+        self.assertEqual(
+            expand_history_m({"k": 1, "d": 2}),
+            {"tg_kifah": 1, "tg_dollariraqi": 2},
+        )
+        # Semantic compare equates legacy full keys with compact shorts
+        same_as_legacy_compact = {
+            "t": "x",
+            "p": legacy["p"],
+            "v": 168800,
+            "s": "tg_kifah",
+            "m": {"d": 169000, "e": 169400, "i": 169375, "k": 168800, "r": 169000},
+        }
+        self.assertEqual(
+            history_semantic_key(legacy),
+            history_semantic_key(same_as_legacy_compact),
+        )
+
+
+class TestCompactLog(unittest.TestCase):
+    def test_published_line_is_explicit(self):
+        from scraper.selector import Decision
+
+        dec = Decision(
+            mode="primary",
+            decision="show_primary",
+            ok=True,
+            value=168800,
+            source="tg_kifah",
+            posted_at="2026-11-26T13:55:19+03:00",
+            stale=False,
+        )
+        lines = compact_run_log(
+            by_source={
+                "tg_kifah": {
+                    "ok": True,
+                    "ms": 120,
+                    "last_ok_post_time": "2026-11-26T13:55:19+03:00",
+                }
+            },
+            source_results={"tg_kifah": {"newest_value": 169999.0}},
+            baghdad=dec,
+            changed_latest=False,
+        )
+        published = [ln for ln in lines if ln.startswith("published ")]
+        self.assertEqual(len(published), 1)
+        self.assertIn("value=168800", published[0])
+        self.assertIn("source=tg_kifah", published[0])
+        # newest ok fetch row must not be mistaken for published
+        self.assertTrue(any("newest=169999" in ln for ln in lines))
+        self.assertFalse(any(ln.startswith("decision ") and "value=" in ln for ln in lines))
 
 
 class TestSourcesMapKeepLastGood(unittest.TestCase):

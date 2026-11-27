@@ -308,6 +308,35 @@ def history_semantic_key(row: dict[str, Any]) -> tuple:
     return (row.get("v"), row.get("s"), stale, _normalize_hist_m(row.get("m") or {}))
 
 
+def expand_history_m(m: Optional[dict[str, Any]]) -> dict[str, Any]:
+    """Expand history ``m`` keys to full source ids (accepts compact or legacy)."""
+    out: dict[str, Any] = {}
+    for k, v in (m or {}).items():
+        long_k = HIST_M_KEYS_REV.get(k, k)
+        out[long_k] = v
+    return out
+
+
+def parse_history_row(raw: dict[str, Any]) -> dict[str, Any]:
+    """Normalize a history JSONL row for consumers.
+
+    Accepts both shapes intentionally present in day files:
+    - legacy: full source ids in ``m``, always includes ``stale``
+    - compact (writer going forward): short ``m`` keys ``d/e/i/k/r``,
+      omits ``stale`` when false
+
+    Past rows are never rewritten; apps must accept both.
+    """
+    return {
+        "t": raw.get("t"),
+        "p": raw.get("p"),
+        "v": raw.get("v"),
+        "s": raw.get("s"),
+        "stale": bool(raw.get("stale")),
+        "m": expand_history_m(raw.get("m") if isinstance(raw.get("m"), dict) else {}),
+    }
+
+
 def append_history_if_changed(
     history_dir: Path,
     row: dict[str, Any],
