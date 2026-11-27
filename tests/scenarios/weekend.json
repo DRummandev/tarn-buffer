@@ -1,0 +1,32 @@
+{
+  "name": "weekend — Thu print still fresh Sun 10:30",
+  "config_overrides": {},
+  "runs": [
+    {
+      "now": "2026-11-29T10:30:00+03:00",
+      "sources": {
+        "tg_kifah": {
+          "fetch_ok": true,
+          "rows": [
+            {
+              "source": "tg_kifah",
+              "market": "kifah",
+              "kind": "bursa",
+              "mid": 168800,
+              "post_time": "2026-11-26T13:55:00+03:00",
+              "post_id": "borsat_alkfah/30588",
+              "parse_status": "ok"
+            }
+          ]
+        }
+      },
+      "expect": {
+        "card": "baghdad",
+        "decision": "show_primary",
+        "value": 168800,
+        "stale": false,
+        "held_reason": null
+      }
+    }
+  ]
+}

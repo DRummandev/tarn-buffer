@@ -16,3 +16,4 @@ probe-out/
 .mypy_cache/
 .DS_Store
 *.log
+dry-out/

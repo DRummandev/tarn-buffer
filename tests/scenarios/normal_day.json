@@ -1,0 +1,80 @@
+{
+  "name": "normal day — Kifah primary",
+  "config_overrides": {},
+  "runs": [
+    {
+      "now": "2026-11-26T14:00:00+03:00",
+      "sources": {
+        "tg_kifah": {
+          "fetch_ok": true,
+          "rows": [
+            {
+              "source": "tg_kifah",
+              "market": "kifah",
+              "kind": "bursa",
+              "mid": 168800,
+              "post_time": "2026-11-26T13:55:19+03:00",
+              "post_id": "borsat_alkfah/30588",
+              "parse_status": "ok"
+            }
+          ]
+        },
+        "tg_dollariraqi": {
+          "fetch_ok": true,
+          "rows": [
+            {
+              "source": "tg_dollariraqi",
+              "market": "baghdad",
+              "kind": "bursa",
+              "mid": 169000,
+              "ask": 169000,
+              "post_time": "2026-11-26T13:50:00+03:00",
+              "post_id": "dollariraqi/6612",
+              "parse_status": "ok"
+            }
+          ]
+        },
+        "info4iq": {
+          "fetch_ok": true,
+          "rows": [
+            {
+              "source": "info4iq",
+              "market": "kifah",
+              "kind": "bursa",
+              "bid": 169400,
+              "ask": 169350,
+              "mid": 169375,
+              "post_time": "2026-11-26T13:00:00+03:00",
+              "post_id": "49829",
+              "parse_status": "ok",
+              "warnings": ["buy_gt_sell"]
+            }
+          ]
+        },
+        "iraqsm": {
+          "fetch_ok": true,
+          "rows": [
+            {
+              "source": "iraqsm",
+              "market": "parallel",
+              "kind": "bursa",
+              "bid": 169000,
+              "ask": 169000,
+              "mid": 169000,
+              "post_time": "2026-11-26T13:30:00+03:00",
+              "parse_status": "ok"
+            }
+          ]
+        }
+      },
+      "expect": {
+        "card": "baghdad",
+        "decision": "show_primary",
+        "value": 168800,
+        "stale": false,
+        "held_reason": null,
+        "warnings_contain": []
+      }
+    }
+  ]
+}
