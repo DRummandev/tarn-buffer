@@ -124,4 +124,11 @@ jobs:
         if: steps.mode.outputs.dry_run != 'true'
         continue-on-error: true
         run: |
-          curl -fsS -X POST "https://purge.jsdelivr.net/gh/DRummandev/tarn-buffer@main/latest.json" || true
+          # jsDelivr purge is a plain GET (POST returns 405). Best-effort; never fail the job.
+          code=$(curl -sS -o /tmp/jsdelivr-purge.body -w "%{http_code}" \
+            "https://purge.jsdelivr.net/gh/DRummandev/tarn-buffer@main/latest.json" || echo "000")
+          echo "jsdelivr_purge_status=${code}"
+          if [ -s /tmp/jsdelivr-purge.body ]; then
+            head -c 500 /tmp/jsdelivr-purge.body || true
+            echo
+          fi

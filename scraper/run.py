@@ -528,6 +528,14 @@ def _detect_parser_drift(kifah_info: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _fmt_compact_num(v: Any) -> str:
+    if v is None:
+        return "-"
+    if isinstance(v, float) and v == int(v):
+        return str(int(v))
+    return str(v)
+
+
 def compact_run_log(
     *,
     by_source: dict[str, dict[str, Any]],
@@ -537,7 +545,12 @@ def compact_run_log(
     post_check_failed: bool = False,
     validation_error: Optional[str] = None,
 ) -> list[str]:
-    """One compact line per source + decision line."""
+    """One compact line per source + explicit published + decision lines.
+
+    Per-source lines show newest ok fetch diagnostics (labelled). The selected
+    official quote is logged separately as ``published value=… source=…`` so
+    it is never confused with the newest ok row.
+    """
     lines: list[str] = []
     for sid in ("tg_kifah", "tg_dollariraqi", "info4iq", "iraqsm", "dinarlive_erbil"):
         info = by_source.get(sid) or {}
@@ -547,21 +560,27 @@ def compact_run_log(
         err = "-" if ok else (info.get("error_class") or sr.get("error_class") or "unknown")
         ms = info.get("ms")
         latency = f"{ms}ms" if ms is not None else "-"
-        newest_v = sr.get("newest_value")
-        newest_s = str(int(newest_v)) if isinstance(newest_v, float) and newest_v == int(newest_v) else (
-            str(newest_v) if newest_v is not None else "-"
-        )
+        newest_s = _fmt_compact_num(sr.get("newest_value"))
         newest_t = info.get("last_ok_post_time") or "-"
-        lines.append(f"{sid} {flag} {err} {latency} {newest_s} {newest_t}")
+        lines.append(
+            f"{sid} {flag} {err} {latency} newest={newest_s} {newest_t}"
+        )
     held = getattr(baghdad, "held_reason", None) or "-"
     decision = getattr(baghdad, "decision", "-")
     value = getattr(baghdad, "value", None)
     source = getattr(baghdad, "source", None) or "-"
+    posted = getattr(baghdad, "posted_at", None) or "-"
+    stale = bool(getattr(baghdad, "stale", False))
     extra = ""
     if post_check_failed:
         extra = f" post_check_failed={validation_error or 'post_check_failed'}"
+    # Selected official quote (selector output) — not the newest ok fetch row.
     lines.append(
-        f"decision {decision} value={value} source={source} held={held} "
+        f"published value={_fmt_compact_num(value)} source={source} "
+        f"posted_at={posted} stale={str(stale).lower()}"
+    )
+    lines.append(
+        f"decision {decision} held={held} "
         f"changed={str(changed_latest).lower()}{extra}"
     )
     return lines
