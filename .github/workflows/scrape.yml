@@ -1,5 +1,9 @@
 name: scrape
 
+# Cron feed writer. Do not add auto-stop until the owner decides —
+# nothing in this workflow may disable the schedule, delete the cron,
+# or stop after N days/failures.
+
 on:
   schedule:
     - cron: "*/5 * * * *"
@@ -22,6 +26,7 @@ concurrency:
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
 
@@ -51,7 +56,9 @@ jobs:
             {
               echo "# Scrape dry-run"
               echo
+              echo '```'
               cat /tmp/scrape-out.txt
+              echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
@@ -71,7 +78,9 @@ jobs:
             {
               echo "# Scrape live"
               echo
+              echo '```'
               cat /tmp/scrape-out.txt
+              echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
           fi
           git status --porcelain || true
@@ -98,6 +107,18 @@ jobs:
           done
           echo "Push failed after retries" >&2
           exit 1
+
+      - name: Ingest alerts
+        if: steps.mode.outputs.dry_run != 'true'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: |
+          # API failures must not fail the scrape run
+          python -m scraper.alerts --status status.json || true
 
       - name: Purge jsDelivr (best-effort)
         if: steps.mode.outputs.dry_run != 'true'

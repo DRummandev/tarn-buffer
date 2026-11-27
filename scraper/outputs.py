@@ -226,26 +226,86 @@ def build_latest(
     return out
 
 
+# Short keys inside history `m` so a worst-case 288-row day stays < 50KB.
+HIST_M_KEYS = {
+    "tg_kifah": "k",
+    "tg_dollariraqi": "d",
+    "info4iq": "i",
+    "iraqsm": "r",
+    "dinarlive_erbil": "e",
+}
+HIST_M_KEYS_REV = {v: k for k, v in HIST_M_KEYS.items()}
+
+
+def _compact_num(v: Any) -> Any:
+    if v is None:
+        return None
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return v
+    if f == int(f) and abs(f) < 1e15:
+        return int(f)
+    return f
+
+
+def _compact_iso(s: Optional[str]) -> Optional[str]:
+    """Strip sub-second fraction to keep history/ small (≤50KB / 288-row day)."""
+    if not s or not isinstance(s, str):
+        return s
+    # 2026-11-27T13:15:48.255537+03:00 → 2026-11-27T13:15:48+03:00
+    if "." in s and ("+" in s[10:] or s.endswith("Z")):
+        head, rest = s.split(".", 1)
+        # rest = 255537+03:00 or 255537Z
+        tz_i = rest.find("+")
+        if tz_i < 0:
+            tz_i = rest.find("-")
+        if tz_i < 0 and rest.endswith("Z"):
+            return head + "Z"
+        if tz_i >= 0:
+            return head + rest[tz_i:]
+    return s
+
+
 def history_row(
     *,
     t: datetime,
     baghdad: Decision,
     source_values: dict[str, float],
 ) -> dict[str, Any]:
-    return {
-        "t": rfc3339(t),
-        "p": baghdad.posted_at,
-        "v": baghdad.value,
+    """Compact JSONL row. Omit stale:false; ints when whole; short m keys; no sub-second."""
+    m: dict[str, Any] = {}
+    for sid, val in source_values.items():
+        key = HIST_M_KEYS.get(sid, sid)
+        m[key] = _compact_num(val)
+    row: dict[str, Any] = {
+        "t": _compact_iso(rfc3339(t)),
+        "p": _compact_iso(baghdad.posted_at),
+        "v": _compact_num(baghdad.value),
         "s": baghdad.source,
-        "stale": baghdad.stale,
-        "m": {k: source_values[k] for k in sorted(source_values)},
+        "m": {k: m[k] for k in sorted(m)},
     }
+    if baghdad.stale:
+        row["stale"] = True
+    return row
+
+
+def _normalize_hist_m(m: dict[str, Any]) -> tuple:
+    """Normalize long or short history m keys for semantic comparison."""
+    out: dict[str, Any] = {}
+    for k, v in (m or {}).items():
+        long_k = HIST_M_KEYS_REV.get(k, k)
+        # Prefer canonical short key for stable compare
+        short = HIST_M_KEYS.get(long_k, k)
+        out[short] = _compact_num(v)
+    return tuple(sorted(out.items()))
 
 
 def history_semantic_key(row: dict[str, Any]) -> tuple:
     """Compare without relying on t for 'real change' of shown/source map."""
-    m = row.get("m") or {}
-    return (row.get("v"), row.get("s"), row.get("stale"), tuple(sorted(m.items())))
+    # Treat omitted stale as False (compact rows omit stale:false)
+    stale = bool(row.get("stale"))
+    return (row.get("v"), row.get("s"), stale, _normalize_hist_m(row.get("m") or {}))
 
 
 def append_history_if_changed(
@@ -309,6 +369,7 @@ def build_status(
     prev_status: Optional[dict[str, Any]],
     source_results: dict[str, dict[str, Any]],
     baghdad: Decision,
+    parser_drift: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     """Operational status. first_failure_at set once on failure, cleared on recovery."""
     now_iso = rfc3339(now)
@@ -342,10 +403,43 @@ def build_status(
     selector_has = any(
         (c or {}).get("valid") for c in (baghdad.candidates or {}).values()
     )
+    prev_no_cand = (prev_status or {}).get("selector_no_candidate_since")
+    if selector_has:
+        no_cand_since = None
+    else:
+        no_cand_since = prev_no_cand or now_iso
+
+    # Parser drift: sticky since timestamp while active; clear when ok Kifah rows return
+    prev_drift = (prev_status or {}).get("parser_drift") or {}
+    drift_in = dict(parser_drift or {})
+    active = bool(drift_in.get("active"))
+    ok_kifah = int(drift_in.get("ok_kifah_rows") or 0)
+    if active and ok_kifah == 0:
+        since = prev_drift.get("since") if prev_drift.get("active") else now_iso
+        if not since:
+            since = now_iso
+        drift_out: dict[str, Any] = {
+            "active": True,
+            "since": since,
+            "ok_kifah_rows": ok_kifah,
+            "rate_looking": bool(drift_in.get("rate_looking")),
+            "http_ok": bool(drift_in.get("http_ok", True)),
+        }
+    else:
+        drift_out = {
+            "active": False,
+            "since": None,
+            "ok_kifah_rows": ok_kifah,
+            "rate_looking": bool(drift_in.get("rate_looking", False)),
+            "http_ok": bool(drift_in.get("http_ok", False)),
+        }
+
     return {
         "sources": sources_out,
         "primary_ok": primary_ok,
         "selector_has_candidate": selector_has,
+        "selector_no_candidate_since": no_cand_since,
+        "parser_drift": drift_out,
         "open_issue": False,
     }
 
@@ -357,12 +451,109 @@ def status_changed(prev: Optional[dict[str, Any]], new: dict[str, Any]) -> bool:
 
 
 def write_json(path: Path, obj: Any, *, pretty: bool = True) -> None:
+    """Write JSON atomically (temp + rename) so latest.json is never half-written."""
+    atomic_write_json(path, obj, pretty=pretty)
+
+
+def atomic_write_json(path: Path, obj: Any, *, pretty: bool = True) -> None:
+    """Write to a same-directory temp file, fsync, then os.replace."""
+    import os
+    import tempfile
+
+    path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     if pretty:
         text = json.dumps(obj, ensure_ascii=False, indent=2) + "\n"
     else:
         text = json.dumps(obj, ensure_ascii=False, separators=(",", ":")) + "\n"
-    path.write_text(text, encoding="utf-8")
+    # Round-trip sanity before touching disk destination
+    roundtrip = json.loads(text)
+    if roundtrip != json.loads(json.dumps(obj, ensure_ascii=False)):
+        # Allow float/int normalisation differences by comparing re-serialised forms
+        if json.dumps(roundtrip, sort_keys=True) != json.dumps(
+            json.loads(json.dumps(obj)), sort_keys=True
+        ):
+            raise ValueError("JSON round-trip mismatch before atomic write")
+    fd, tmp_name = tempfile.mkstemp(
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+        dir=str(path.parent),
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_name, path)
+    except Exception:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
+
+
+def validate_latest_payload(
+    latest: dict[str, Any],
+    *,
+    sanity_min: float,
+    sanity_max: float,
+) -> Optional[str]:
+    """Return error string if payload fails JSON/sanity checks; else None."""
+    try:
+        text = json.dumps(latest, ensure_ascii=False)
+        loaded = json.loads(text)
+    except (TypeError, ValueError) as e:
+        return f"json_invalid:{e}"
+    if not isinstance(loaded, dict):
+        return "json_not_object"
+    value = loaded.get("value")
+    if value is not None:
+        try:
+            v = float(value)
+        except (TypeError, ValueError):
+            return "value_not_numeric"
+        if not (sanity_min <= v <= sanity_max):
+            return f"value_out_of_range:{v}"
+    return None
+
+
+def post_check_jump(
+    prev: Optional[dict[str, Any]],
+    new: dict[str, Any],
+    *,
+    jump_pct: float,
+) -> Optional[str]:
+    """If value jumped by > jump_pct and held_reason is unset, return post_check_failed."""
+    if not prev or prev.get("value") is None or new.get("value") is None:
+        return None
+    if new.get("held_reason"):
+        return None
+    try:
+        old_v = float(prev["value"])
+        new_v = float(new["value"])
+    except (TypeError, ValueError):
+        return "post_check_failed"
+    if old_v == 0:
+        return None
+    pct = abs(new_v - old_v) / abs(old_v) * 100.0
+    if pct > float(jump_pct):
+        return "post_check_failed"
+    return None
+
+
+def estimate_history_day_bytes(*, n_rows: int = 288) -> int:
+    """Worst-case size of a day JSONL file (compact rows) for size assertion."""
+    sample = {
+        "t": "2026-11-26T15:30:00+03:00",
+        "p": "2026-11-26T15:29:59+03:00",
+        "v": 168800,
+        "s": "tg_kifah",
+        "stale": True,
+        "m": {"d": 169000, "e": 168500, "i": 169375, "k": 168800, "r": 169000},
+    }
+    line = json.dumps(sample, ensure_ascii=False, separators=(",", ":")) + "\n"
+    return len(line.encode("utf-8")) * int(n_rows)
 
 
 def load_json(path: Path) -> Optional[dict[str, Any]]:
