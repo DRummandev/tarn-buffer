@@ -1,0 +1,41 @@
+name: probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration_minutes:
+        description: "Probe duration in minutes"
+        required: false
+        default: "10"
+        type: string
+      interval_seconds:
+        description: "Seconds between cycles (min 60)"
+        required: false
+        default: "300"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  live-probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Live read-only probe
+        run: |
+          DUR="${{ inputs.duration_minutes }}"
+          INT="${{ inputs.interval_seconds }}"
+          DUR="${DUR:-10}"
+          INT="${INT:-300}"
+          python -m scraper.probe --duration-minutes "$DUR" --interval-seconds "$INT" --out-dir probe-out
+      - name: Upload probe-out
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: probe-out
+          path: probe-out/
+          retention-days: 14

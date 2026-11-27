@@ -1,0 +1,782 @@
+{
+ "_note": "Real posts from t.me/s/borsat_alkfah (collected 2026-11-27). 'expect' is what the reference Go parser (parse.go in the phase-1 attachments) returns; the engineer's parser must agree on market/status/bid/ask/mid. Text is the stripped plain text. Unit: IQD per 100 USD. Sanity range 120000-220000.",
+ "kifah_posts": [
+  {
+   "ID": "borsat_alkfah/30258",
+   "Time": "2026-11-02T11:12:56+03:00",
+   "Text": "البصرة 168.200",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "basra",
+     "status": "ok",
+     "mid": 168200
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30262",
+   "Time": "2026-11-03T10:20:32+03:00",
+   "Text": "🟢 سموأل 🏠 مطلوب 167,900 💰 معروض 167,900 💰",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "samawal",
+     "status": "ok",
+     "bid": 167900,
+     "ask": 167900,
+     "mid": 167900
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30263",
+   "Time": "2026-11-03T10:20:46+03:00",
+   "Text": "🟢 كفاح 🏠 مطلوب 167,900 💰 معروض 167,950 💰",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "kifah",
+     "status": "ok",
+     "bid": 167900,
+     "ask": 167950,
+     "mid": 167925
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30272",
+   "Time": "2026-11-03T11:41:15+03:00",
+   "Text": "سليمانية 168,200",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "sulaymaniyah",
+     "status": "ok",
+     "mid": 168200
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30278",
+   "Time": "2026-11-03T11:43:47+03:00",
+   "Text": "اليورو 100 يورو = 112 $ 100 يورو = 188,000",
+   "PostStatus": "fx_skipped",
+   "expect": null
+  },
+  {
+   "ID": "borsat_alkfah/30279",
+   "Time": "2026-11-03T11:44:18+03:00",
+   "Text": "التومان الايراني 100$ = 27,360,000",
+   "PostStatus": "fx_skipped",
+   "expect": null
+  },
+  {
+   "ID": "borsat_alkfah/30288",
+   "Time": "2026-11-04T10:25:06+03:00",
+   "Text": "🟢 كفاح 168,100",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "kifah",
+     "status": "ok",
+     "mid": 168100
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30322",
+   "Time": "2026-11-08T15:24:34+03:00",
+   "Text": "🟢 اليورو 187,400",
+   "PostStatus": "fx_skipped",
+   "expect": null
+  },
+  {
+   "ID": "borsat_alkfah/30326",
+   "Time": "2026-11-09T12:22:19+03:00",
+   "Text": "🟢 سموأل - 🟢 حارثية - 🟢 كفاح 168,450",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "samawal",
+     "status": "ok",
+     "mid": 168450,
+     "warnings": [
+      "combined_post"
+     ]
+    },
+    {
+     "market": "harithiya",
+     "status": "ok",
+     "mid": 168450,
+     "warnings": [
+      "combined_post"
+     ]
+    },
+    {
+     "market": "kifah",
+     "status": "ok",
+     "mid": 168450,
+     "warnings": [
+      "combined_post"
+     ]
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30371",
+   "Time": "2026-11-11T11:53:45+03:00",
+   "Text": "بغداد 169.050 عرض",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "baghdad",
+     "status": "ok",
+     "ask": 169050,
+     "mid": 169050,
+     "warnings": [
+      "ask_only"
+     ]
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30373",
+   "Time": "2026-11-11T11:57:04+03:00",
+   "Text": "الحارثية 169.000 عرض",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "harithiya",
+     "status": "ok",
+     "ask": 169000,
+     "mid": 169000,
+     "warnings": [
+      "ask_only"
+     ]
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30395",
+   "Time": "2026-11-12T11:19:15+03:00",
+   "Text": "https://t.me/+6egarf7UM8AzNWUy الي يحب يدخل للجات مال القناة يتفضل",
+   "PostStatus": "promo_skipped",
+   "expect": null
+  },
+  {
+   "ID": "borsat_alkfah/30406",
+   "Time": "2026-11-12T12:38:33+03:00",
+   "Text": "بورصة الكفاح pinned Deleted message",
+   "PostStatus": "not_a_rate",
+   "expect": null
+  },
+  {
+   "ID": "borsat_alkfah/30411",
+   "Time": "2026-11-14T10:48:20+03:00",
+   "Text": "🟢 سموأل / كفاح / حارثية 169,300",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "samawal",
+     "status": "ok",
+     "mid": 169300,
+     "warnings": [
+      "combined_post"
+     ]
+    },
+    {
+     "market": "kifah",
+     "status": "ok",
+     "mid": 169300,
+     "warnings": [
+      "combined_post"
+     ]
+    },
+    {
+     "market": "harithiya",
+     "status": "ok",
+     "mid": 169300,
+     "warnings": [
+      "combined_post"
+     ]
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30415",
+   "Time": "2026-11-14T12:53:31+03:00",
+   "Text": "🟢 حارثية169,500",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "harithiya",
+     "status": "ok",
+     "mid": 169500
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30420",
+   "Time": "2026-11-14T16:15:12+03:00",
+   "Text": "كفاح / حارثية / سموأل 169,700 مطلوب",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "kifah",
+     "status": "ok",
+     "bid": 169700,
+     "mid": 169700,
+     "warnings": [
+      "bid_only",
+      "combined_post"
+     ]
+    },
+    {
+     "market": "harithiya",
+     "status": "ok",
+     "bid": 169700,
+     "mid": 169700,
+     "warnings": [
+      "bid_only",
+      "combined_post"
+     ]
+    },
+    {
+     "market": "samawal",
+     "status": "ok",
+     "bid": 169700,
+     "mid": 169700,
+     "warnings": [
+      "bid_only",
+      "combined_post"
+     ]
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30425",
+   "Time": "2026-11-15T10:10:28+03:00",
+   "Text": "🟢 كفاح مطلوب 170,000 معروض 170,000",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "kifah",
+     "status": "ok",
+     "bid": 170000,
+     "ask": 170000,
+     "mid": 170000
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30426",
+   "Time": "2026-11-15T10:13:54+03:00",
+   "Text": "👎 👎 👎 👎 للاسف يومية يصعد شوية نتامل من المسؤليين متابعة الموقف",
+   "PostStatus": "not_a_rate",
+   "expect": null
+  },
+  {
+   "ID": "borsat_alkfah/30428",
+   "Time": "2026-11-15T10:23:20+03:00",
+   "Text": "🟢 اربيل مطلوب 170,000 معروض 170,050",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "erbil",
+     "status": "ok",
+     "bid": 170000,
+     "ask": 170050,
+     "mid": 170025
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30429",
+   "Time": "2026-11-15T10:24:39+03:00",
+   "Text": "🟢 البصرة / النجف /كربلاء مطلوب 169,900 معروض 170,100",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "basra",
+     "status": "ok",
+     "bid": 169900,
+     "ask": 170100,
+     "mid": 170000,
+     "warnings": [
+      "combined_post"
+     ]
+    },
+    {
+     "market": "najaf",
+     "status": "ok",
+     "bid": 169900,
+     "ask": 170100,
+     "mid": 170000,
+     "warnings": [
+      "combined_post"
+     ]
+    },
+    {
+     "market": "karbala",
+     "status": "ok",
+     "bid": 169900,
+     "ask": 170100,
+     "mid": 170000,
+     "warnings": [
+      "combined_post"
+     ]
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30430",
+   "Time": "2026-11-15T10:25:23+03:00",
+   "Text": "🟢 الموصل 169,850 170,200",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "mosul",
+     "status": "ok",
+     "bid": 169850,
+     "ask": 170200,
+     "mid": 170025,
+     "warnings": [
+      "two_numbers_assumed_bid_ask"
+     ]
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30442",
+   "Time": "2026-11-16T08:03:08+03:00",
+   "Text": "صباح الخير حسب الي صار بليل التوقعات تكول 171,000 والله اعلم سوق البورصة بعد ممفتوح حتى نتاكد بس هذا سعر تقريبي",
+   "PostStatus": "qualifier_skipped",
+   "expect": null
+  },
+  {
+   "ID": "borsat_alkfah/30473",
+   "Time": "2026-11-16T13:43:48+03:00",
+   "Text": "171,200 بغداد 🔻",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "baghdad",
+     "status": "ok",
+     "mid": 171200,
+     "warnings": [
+      "number_before_name"
+     ]
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30477",
+   "Time": "2026-11-16T14:02:50+03:00",
+   "Text": "170,950 انباع ع باجر 🔻",
+   "PostStatus": "qualifier_skipped",
+   "expect": null
+  },
+  {
+   "ID": "borsat_alkfah/30479",
+   "Time": "2026-11-16T14:07:41+03:00",
+   "Text": "170,850 انباع ع باجر بغداد 🔻 120 الف",
+   "PostStatus": "qualifier_skipped",
+   "expect": null
+  },
+  {
+   "ID": "borsat_alkfah/30486",
+   "Time": "2026-11-18T18:11:47+03:00",
+   "Text": "‏متابعة قناة بورصة الكفاح على واتساب: https://whatsapp.com/channel/0029VbDp3GaGufIsMe3x7H2x بغداد 170.650 🔥",
+   "PostStatus": "promo_skipped",
+   "expect": null
+  },
+  {
+   "ID": "borsat_alkfah/30498",
+   "Time": "2026-11-23T10:10:40+03:00",
+   "Text": "🟢 السموأل 167,900",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "samawal",
+     "status": "ok",
+     "mid": 167900
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30499",
+   "Time": "2026-11-23T10:15:29+03:00",
+   "Text": "🟢 الكفاح 168,000",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "kifah",
+     "status": "ok",
+     "mid": 168000
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30542",
+   "Time": "2026-11-25T10:07:41+03:00",
+   "Text": "🟢 البصرة / النجف / كربلاء 169,100",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "basra",
+     "status": "ok",
+     "mid": 169100,
+     "warnings": [
+      "combined_post"
+     ]
+    },
+    {
+     "market": "najaf",
+     "status": "ok",
+     "mid": 169100,
+     "warnings": [
+      "combined_post"
+     ]
+    },
+    {
+     "market": "karbala",
+     "status": "ok",
+     "mid": 169100,
+     "warnings": [
+      "combined_post"
+     ]
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30545",
+   "Time": "2026-11-25T10:08:35+03:00",
+   "Text": "🟢 دهوك 169,500 🟢",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "duhok",
+     "status": "ok",
+     "mid": 169500
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30554",
+   "Time": "2026-11-25T11:57:28+03:00",
+   "Text": "🟢 كفاح / حارثية / سموأل 169400",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "kifah",
+     "status": "ok",
+     "mid": 169400,
+     "warnings": [
+      "combined_post"
+     ]
+    },
+    {
+     "market": "harithiya",
+     "status": "ok",
+     "mid": 169400,
+     "warnings": [
+      "combined_post"
+     ]
+    },
+    {
+     "market": "samawal",
+     "status": "ok",
+     "mid": 169400,
+     "warnings": [
+      "combined_post"
+     ]
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30567",
+   "Time": "2026-11-25T12:58:47+03:00",
+   "Text": "الحارثية 169.900 عرض",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "harithiya",
+     "status": "ok",
+     "ask": 169900,
+     "mid": 169900,
+     "warnings": [
+      "ask_only"
+     ]
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30569",
+   "Time": "2026-11-25T13:16:10+03:00",
+   "Text": "الكفاح والحارثية 169.800 عرض",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "kifah",
+     "status": "ok",
+     "ask": 169800,
+     "mid": 169800,
+     "warnings": [
+      "ask_only",
+      "combined_post"
+     ]
+    },
+    {
+     "market": "harithiya",
+     "status": "ok",
+     "ask": 169800,
+     "mid": 169800,
+     "warnings": [
+      "ask_only",
+      "combined_post"
+     ]
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30588",
+   "Time": "2026-11-26T13:55:19+03:00",
+   "Text": "🟢 كفاح 168,800",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "kifah",
+     "status": "ok",
+     "mid": 168800
+    }
+   ]
+  },
+  {
+   "ID": "borsat_alkfah/30589",
+   "Time": "2026-11-26T13:55:37+03:00",
+   "Text": "🟢 حارثية 168,650",
+   "PostStatus": "rate_post",
+   "expect": [
+    {
+     "market": "harithiya",
+     "status": "ok",
+     "mid": 168650
+    }
+   ]
+  }
+ ],
+ "dollariraqi_posts": [
+  {
+   "id": "dollariraqi/6593",
+   "time_utc": "2026-11-15T18:09:57+00:00",
+   "text": "🟢 آخر أسعار الدولار في البورصات المحلية 🕰 🔒 🔒 : 💱 بغداد – الصيرفات ⚡️ 🆕 🔴 البيع: 171,000 🟢 الشراء: 170,500 💱 أربيل – اسكان ⚡️ 🆕 🔴 البيع: 171,000 🟢 الشراء: 170,700 الاغلاق اليومي: 🏛️ بغداد 170,400 🏛️ أربيل 170,800 🏛️ السليمانية 170,700 🏛️ كربلاء 170,500 🏛️ النجف 170,500 🏛️ البصرة 170,450 🏛️ كركوك 170,800 🏛️ الموصل 170,750 🏛️ دهوك 170,750 🔹 الأسعار عرض. تحديث 🔒 الاحد-15 تشرين الثاني/نوفمبر 2026م 🔒 🔒 🔒 🔒 🔒 🔒 🔒 🌐 - @dollariraqi"
+  },
+  {
+   "id": "dollariraqi/6594",
+   "time_utc": "2026-11-16T09:05:02+00:00",
+   "text": "🟢 آخر أسعار الدولار في البورصات المحلية 🕰 🔺 🔺 🔥 : 🏛️ بغداد 171,550 🏛️ أربيل 171,650 🏛️ السليمانية 171,750 🏛️ كربلاء 171,650 🏛️ النجف 171,650 🏛️ البصرة 171,550 🏛️ كركوك 171,850 🏛️ الموصل 171,750 🏛️ دهوك 171,750 🔹 الأسعار عرض. 💱 بغداد – الصيرفات 🔴 البيع: 171,750 🟢 الشراء: 171,250 🟡 سعر مثقال الذهب عيار 21 – أربيل 943,000 دينار 🇪🇺 اليورو 110.5 دولار 💷 الجنيه الإسترليني 132 دولارًا تحديث 12:00الاثنين-16 تشرين الثاني/نوفمبر 2026م * 📌 السوق غير مستقر: سعر الدولار وقت النشر ويتغير بسرعة* 🌐 - @dollariraqi"
+  },
+  {
+   "id": "dollariraqi/6601",
+   "time_utc": "2026-11-21T09:18:10+00:00",
+   "text": "🟢 آخر أسعار الدولار في البورصات المحلية 🕰 🔺 🔺 🔥 : 🔴 آخر أسعار 100 دولار في البورصات العراقية 🏛️ بغداد 170,100 🏛️ أربيل 170,250 🏛️ السليمانية 170,350 🏛️ كربلاء 170,200 🏛️ النجف 170,200 🏛️ البصرة 170,150 🏛️ كركوك 170,450 🏛️ الموصل 170,350 🏛️ دهوك 170,300 🔹 الأسعار عرض 💱 بغداد – الصيرفات 🔴 البيع: 170,200 🟢 الشراء: 169,750 🟡 سعر مثقال الذهب عيار 21 – أربيل 875,000 دينار تحديث 12:15السبت-21 تشرين الثاني/نوفمبر 2026م * 📌 السوق غير مستقر: سعر الدولار وقت النشر ويتغير بسرعة* 🌐 - @dollariraqi"
+  },
+  {
+   "id": "dollariraqi/6610",
+   "time_utc": "2026-11-26T08:22:02+00:00",
+   "text": "🟢 آخر أسعار الدولار في البورصات المحلية 🕰 🔺 🔺 🔥 : 🏛 بغداد 169,350 🏛 أربيل 169,650 🏛 السليمانية 169,700 🏛 كربلاء 169,450 🏛 النجف 169,450 🏛 البصرة 169,400 🏛 كركوك 169,800 🏛 الموصل 169,800 🏛 دهوك 169,700 🔹 الأسعار عرض 💱 بغداد – الصيرفات 🔴 البيع: 169,500 🟢 الشراء: 169,000 🟡 سعر مثقال الذهب عيار 21 – أربيل 900,000 دينار تحديث 11:20الخميس-26 تشرين الثاني/نوفمبر 2026م * 📌 السوق غير مستقر: سعر الدولار وقت النشر ويتغير بسرعة* 🌐 - @dollariraqi"
+  },
+  {
+   "id": "dollariraqi/6611",
+   "time_utc": "2026-11-26T11:18:06+00:00",
+   "text": "🟢 آخر أسعار الدولار في البورصات المحلية 🕰 🔺 🔻 🔥 : 🏛 بغداد 168,800 🏛 أربيل 169,050 🏛 السليمانية 169,200 🏛 كربلاء 168,900 🏛 النجف 168,900 🏛 البصرة 168,900 🏛 كركوك 169,300 🏛 الموصل 169,150 🏛 دهوك 169,100 🔹 الأسعار عرض 💱 بغداد – الصيرفات 🔴 البيع: 169,000 🟢 الشراء: 168,250 تحديث 14:15الخميس-26 تشرين الثاني/نوفمبر 2026م * 📌 السوق غير مستقر: سعر الدولار وقت النشر ويتغير بسرعة* 🌐 - @dollariraqi"
+  },
+  {
+   "id": "dollariraqi/6612",
+   "time_utc": "2026-11-26T20:24:32+00:00",
+   "text": "🟢 آخر أسعار الدولار في البورصات المحلية 🕰 🔒 🔒 : 🏛 بغداد 169,000 🏛 أربيل 169,400 🏛 السليمانية 169,450 🏛 كربلاء 169,100 🏛 النجف 169,100 🏛 البصرة 169,100 🏛 كركوك 169,550 🏛 الموصل 169,500 🏛 دهوك 169,450 🔹 الأسعار عرض 💱 بغداد – الصيرفات 🔴 البيع: 169,000 🟢 الشراء: 168,600 تحديث 🔒 الخميس-26 تشرين الثاني/نوفمبر 2026م 🔒 🔒 🔒 🔒 🔒 🔒 🌐 - @dollariraqi"
+  }
+ ],
+ "dollariraqi_note": "City list = 'bursa' prices (the 'الأسعار عرض' = ask). Shop block (💱 ... البيع/الشراء) must NOT be used for the Baghdad bursa rate. Trailing gold/euro/pound lines must be ignored. Expected Baghdad bursa values: 6593=170400 (daily close), 6610=169350, 6611=168800, 6612=169000, 6601=170100, 6594=171550.",
+ "json_sources": {
+  "info4iq_get_prem_markets_prices.php": [
+   {
+    "ID": "49829",
+    "sell": "169.35",
+    "buy": "169.40",
+    "name": "الكفاح",
+    "time": "2026-11-26 08:06:10",
+    "givenDate": "2026-11-26 08:06:10",
+    "market_name": "الكفاح",
+    "marketOffered": "169.35"
+   }
+  ],
+  "info4iq_note": "Body starts with CRLF/BOM; values are thousands of IQD per 100 USD (169.35 -> 169350). 'sell'==marketOffered (ask), 'buy' (bid) may be > sell (crossed) -> use mid and warn. time is Asia/Baghdad local.",
+  "iraqsm_data_fx.json": {
+   "kind": "fx",
+   "asOf": "2026-11-26",
+   "source": "IQWealth (https://iraqsm.com/fx)",
+   "page": "https://iraqsm.com/fx",
+   "publisher": "IQWealth (iraqsm.com)",
+   "license": "Free to use with attribution to IQWealth (iraqsm.com). Not real-time: figures are as of the session or reading stated in asOf.",
+   "docs": "https://iraqsm.com/llms.txt",
+   "generatedAt": "2026-11-26T21:17:33.044Z",
+   "unit": "IQD per 1 USD",
+   "parallel": {
+    "buy": 1690,
+    "sell": 1690,
+    "stale": false,
+    "publishedAt": "2026-11-26T20:24:32.000Z"
+   },
+   "official": {
+    "cbi": 1510,
+    "confirmed": "2026-10-07"
+   },
+   "gapPct": 11.92,
+   "shops": {
+    "sell": 1690,
+    "buy": 1686,
+    "publishedAt": "2026-11-26T20:24:32.000Z"
+   }
+  },
+  "iraqsm_note": "Unit IQD per 1 USD, x100 for per-100$. Coarse precision. Credit required: 'Data: IQWealth (iraqsm.com)'. publishedAt is UTC.",
+  "dinarlive_get-price_id5_erbil": {
+   "created_at": "2026-11-26 21:00:08",
+   "value": 169400
+  },
+  "dinarlive_note": "Erbil only (Baghdad endpoint is stale since 2026-07-30). Max 10 req/min. created_at timezone not yet confirmed (assumed Baghdad)."
+ },
+ "collect_probe_2026-11-26_sample": [
+  {
+   "per100": 168800,
+   "ts": "13:55",
+   "shops_sell": 169000,
+   "shops_ts": "14:18",
+   "src": "iraqsm_json",
+   "fetched_bg": "17:50:46",
+   "ms": 2692
+  },
+  {
+   "per100": 168800,
+   "ts": "13:55",
+   "harithiya": "168,650",
+   "samawal": "168,700",
+   "src": "iraqsm_kifah_html",
+   "fetched_bg": "17:50:46",
+   "ms": 1458
+  },
+  {
+   "per100": 168800,
+   "erbil": 169050,
+   "ts": "14:18",
+   "src": "tg_dollariraqi",
+   "fetched_bg": "17:50:46",
+   "ms": 707
+  },
+  {
+   "per100": 169250,
+   "ts": "15:43",
+   "avg_per100": 169650,
+   "erbil": 169650,
+   "erbil_ts": "17:11",
+   "src": "xeiqd_json",
+   "fetched_bg": "17:50:46",
+   "ms": 708
+  },
+  {
+   "per100": 150800,
+   "ts": "2026-07-30 17:45:28",
+   "src": "dinarlive_baghdad",
+   "fetched_bg": "17:50:46",
+   "ms": 149
+  },
+  {
+   "per100": 169400,
+   "ts": "2026-11-26 14:30:08",
+   "src": "dinarlive_erbil",
+   "fetched_bg": "17:50:46",
+   "ms": 168
+  },
+  {
+   "per100": 169200,
+   "ts": "الخميس، ٢٦ تشرين الثاني — ٧:٤٤ ص",
+   "src": "goldiraq_html",
+   "fetched_bg": "17:50:46",
+   "ms": 1982
+  },
+  {
+   "per100": 169000,
+   "ts": "2026-11-26",
+   "erbil": 169600,
+   "src": "iraqmonitor_html",
+   "fetched_bg": "17:50:46",
+   "ms": 1603
+  },
+  {
+   "per100": 168800,
+   "ts": "13:55",
+   "shops_sell": 169000,
+   "shops_ts": "14:18",
+   "src": "iraqsm_json",
+   "fetched_bg": "17:55:55",
+   "ms": 1563
+  },
+  {
+   "per100": 168800,
+   "ts": "13:55",
+   "harithiya": "168,650",
+   "samawal": "168,700",
+   "src": "iraqsm_kifah_html",
+   "fetched_bg": "17:55:55",
+   "ms": 1353
+  },
+  {
+   "per100": 168800,
+   "erbil": 169050,
+   "ts": "14:18",
+   "src": "tg_dollariraqi",
+   "fetched_bg": "17:55:55",
+   "ms": 775
+  },
+  {
+   "per100": 169250,
+   "ts": "15:43",
+   "avg_per100": 169650,
+   "erbil": 169650,
+   "erbil_ts": "17:11",
+   "src": "xeiqd_json",
+   "fetched_bg": "17:55:55",
+   "ms": 632
+  },
+  {
+   "per100": 150800,
+   "ts": "2026-07-30 17:45:28",
+   "src": "dinarlive_baghdad",
+   "fetched_bg": "17:55:55",
+   "ms": 180
+  },
+  {
+   "per100": 169400,
+   "ts": "2026-11-26 14:30:08",
+   "src": "dinarlive_erbil",
+   "fetched_bg": "17:55:55",
+   "ms": 201
+  },
+  {
+   "per100": 169200,
+   "ts": "الخميس، ٢٦ تشرين الثاني — ٧:٤٤ ص",
+   "src": "goldiraq_html",
+   "fetched_bg": "17:55:55",
+   "ms": 3370
+  },
+  {
+   "per100": 169000,
+   "ts": "2026-11-26",
+   "erbil": 169600,
+   "src": "iraqmonitor_html",
+   "fetched_bg": "17:55:55",
+   "ms": 2216
+  }
+ ]
+}
