@@ -1,0 +1,58 @@
+name: keepalive
+
+# Weekly stamp so GitHub does not disable scheduled workflows after 60 days
+# of repository inactivity. Odd minute on purpose. Never runs every 5 minutes.
+# A keepalive commit is not a data change and must not touch latest.json/history/.
+
+on:
+  schedule:
+    - cron: "17 3 * * 1" # Monday 03:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update .keepalive if last main commit older than 6 days
+        run: |
+          set -euo pipefail
+          git fetch origin main --prune
+          LAST_ISO=$(git log -1 --format=%cI origin/main)
+          NOW_ISO=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "last_commit=$LAST_ISO now=$NOW_ISO"
+          DUE=$(python3 -m scraper.alerts --keepalive-due --last-commit-iso "$LAST_ISO" --now-iso "$NOW_ISO")
+          echo "keepalive_due=$DUE"
+          if [ "$DUE" != "yes" ]; then
+            echo "No-op: last commit on main is newer than 6 days."
+            exit 0
+          fi
+          date -u +%Y-%m-%dT%H:%M:%SZ > .keepalive
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .keepalive
+          if git diff --cached --quiet; then
+            echo "No-op: .keepalive unchanged."
+            exit 0
+          fi
+          # Never stage data outputs from a keepalive run
+          git reset HEAD -- latest.json history status.json 2>/dev/null || true
+          git commit -m "keepalive"
+          for i in 1 2 3; do
+            git pull --rebase origin main || true
+            if git push origin HEAD:main; then
+              echo "keepalive pushed."
+              exit 0
+            fi
+            echo "Push conflict, retry $i…"
+            sleep $((i * 2))
+          done
+          echo "Push failed after retries" >&2
+          exit 1

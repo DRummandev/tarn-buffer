@@ -1,0 +1,40 @@
+name: alert-test
+
+# Manual only. Operates on issues titled "TEST ingest: sources failing"
+# so the owner can verify open / no-duplicate / close without touching production titles.
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: "open | close | duplicate-check"
+        required: true
+        type: choice
+        options:
+          - open
+          - close
+          - duplicate-check
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  alert-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run alert-test scenario
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          python3 -m scraper.alerts --test-scenario "${{ inputs.scenario }}"
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            echo "# alert-test \`${{ inputs.scenario }}\`" >> "$GITHUB_STEP_SUMMARY"
+          fi

@@ -34,8 +34,10 @@ from .outputs import (
     latest_changed,
     load_json,
     make_quote,
+    post_check_jump,
     post_url_for,
     status_changed,
+    validate_latest_payload,
     write_json,
 )
 from .selector import Candidate, select_card, merge_card_state
@@ -379,14 +381,18 @@ def run_pipeline(
             "ok": bool(info.get("ok")),
             "error_class": info.get("error_class"),
             "last_ok_post_time": info.get("last_ok_post_time"),
+            "ms": info.get("ms"),
+            "newest_value": _newest_ok_value(info),
         }
         for sid, info in by_source.items()
     }
+    parser_drift = _detect_parser_drift(by_source.get("tg_kifah") or {})
     status = build_status(
         now=now,
         prev_status=prev_status,
         source_results=source_results,
         baghdad=baghdad_dec,
+        parser_drift=parser_drift,
     )
 
     # Compare against committed latest.json (dry-run never treats prior dry-out as baseline)
@@ -396,8 +402,25 @@ def run_pipeline(
     wrote_latest = False
     wrote_history = False
     wrote_status = False
+    post_check_failed = False
+    validation_error: Optional[str] = None
 
+    # Pre-commit validation + jump post-check (defence in depth)
     if changed_latest:
+        validation_error = validate_latest_payload(
+            latest, sanity_min=cfg.sanity_min, sanity_max=cfg.sanity_max
+        )
+        if validation_error is None:
+            jump_err = post_check_jump(prev_latest, latest, jump_pct=cfg.jump_pct)
+            if jump_err:
+                validation_error = jump_err
+        if validation_error:
+            post_check_failed = True
+            # Commit nothing: skip all writes (failure recorded in logs / result)
+            changed_latest = False
+            would_change_status = False
+
+    if changed_latest and not post_check_failed:
         write_json(write_latest, latest, pretty=True)
         wrote_latest = True
         if baghdad_dec.ok and baghdad_dec.value is not None:
@@ -410,10 +433,10 @@ def run_pipeline(
         elif dry_run:
             write_history.mkdir(parents=True, exist_ok=True)
 
-    if would_change_status:
+    if would_change_status and not post_check_failed:
         write_json(write_status, status, pretty=True)
         wrote_status = True
-    elif dry_run:
+    elif dry_run and not post_check_failed:
         # Always materialise status in dry-out for the artifact
         write_json(write_status, status, pretty=True)
 
@@ -421,6 +444,14 @@ def run_pipeline(
         baghdad=baghdad_dec,
         cards=cards,
         source_results=source_results,
+    )
+    compact_lines = compact_run_log(
+        by_source=by_source,
+        source_results=source_results,
+        baghdad=baghdad_dec,
+        changed_latest=changed_latest,
+        post_check_failed=post_check_failed,
+        validation_error=validation_error,
     )
 
     result = {
@@ -430,16 +461,110 @@ def run_pipeline(
         "wrote_latest": wrote_latest,
         "wrote_history": wrote_history,
         "wrote_status": wrote_status,
+        "post_check_failed": post_check_failed,
+        "validation_error": validation_error,
         "decision": baghdad_dec.decision,
         "value": baghdad_dec.value,
         "source": baghdad_dec.source,
         "warnings": list(baghdad_dec.warnings),
         "table": table,
+        "compact_log": compact_lines,
         "latest": latest,
         "status": status,
         "bag_state": bag_state,
+        "by_source": by_source,
     }
     return result
+
+
+def _newest_ok_value(info: dict[str, Any]) -> Optional[float]:
+    rows: list[Row] = list(info.get("rows") or [])
+    best: Optional[float] = None
+    best_t = ""
+    for r in rows:
+        if r.parse_status == "ok" and r.mid is not None and r.post_time:
+            if r.post_time >= best_t:
+                best_t = r.post_time
+                best = float(r.mid)
+    return best
+
+
+def _detect_parser_drift(kifah_info: dict[str, Any]) -> dict[str, Any]:
+    """Primary fetched OK with posts, but zero ok Kifah rows while rate-looking posts exist."""
+    rows: list[Row] = list(kifah_info.get("rows") or [])
+    http_status = kifah_info.get("http_status")
+    http_ok = bool(kifah_info.get("fetch_ok") or (http_status == 200 and rows))
+    # fetch_ok in run means parse succeeded overall; for drift we need HTTP/posts present
+    if http_status is not None:
+        http_ok = http_status == 200 and bool(rows)
+    elif rows and not kifah_info.get("error_class"):
+        http_ok = True
+    ok_kifah = sum(
+        1 for r in rows if r.market == "kifah" and r.parse_status == "ok" and r.mid is not None
+    )
+    rate_looking_statuses = {
+        "ok",
+        "ambiguous",
+        "out_of_range",
+        "crossed",
+        "wide_spread",
+        "not_a_rate",
+        "bid_only",
+        "ask_only",
+    }
+    rate_looking = any(
+        (r.parse_status in rate_looking_statuses) or (r.market and r.parse_status != "no_text")
+        for r in rows
+    )
+    # Also count posts that look like rates via non-empty market hits that failed
+    if not rate_looking and rows:
+        rate_looking = any(r.market for r in rows)
+    active = bool(http_ok and ok_kifah == 0 and rate_looking and rows)
+    return {
+        "active": active,
+        "ok_kifah_rows": ok_kifah,
+        "rate_looking": rate_looking,
+        "http_ok": http_ok,
+    }
+
+
+def compact_run_log(
+    *,
+    by_source: dict[str, dict[str, Any]],
+    source_results: dict[str, dict[str, Any]],
+    baghdad: Any,
+    changed_latest: bool,
+    post_check_failed: bool = False,
+    validation_error: Optional[str] = None,
+) -> list[str]:
+    """One compact line per source + decision line."""
+    lines: list[str] = []
+    for sid in ("tg_kifah", "tg_dollariraqi", "info4iq", "iraqsm", "dinarlive_erbil"):
+        info = by_source.get(sid) or {}
+        sr = source_results.get(sid) or {}
+        ok = bool(info.get("ok"))
+        flag = "ok" if ok else "FAIL"
+        err = "-" if ok else (info.get("error_class") or sr.get("error_class") or "unknown")
+        ms = info.get("ms")
+        latency = f"{ms}ms" if ms is not None else "-"
+        newest_v = sr.get("newest_value")
+        newest_s = str(int(newest_v)) if isinstance(newest_v, float) and newest_v == int(newest_v) else (
+            str(newest_v) if newest_v is not None else "-"
+        )
+        newest_t = info.get("last_ok_post_time") or "-"
+        lines.append(f"{sid} {flag} {err} {latency} {newest_s} {newest_t}")
+    held = getattr(baghdad, "held_reason", None) or "-"
+    decision = getattr(baghdad, "decision", "-")
+    value = getattr(baghdad, "value", None)
+    source = getattr(baghdad, "source", None) or "-"
+    extra = ""
+    if post_check_failed:
+        extra = f" post_check_failed={validation_error or 'post_check_failed'}"
+    lines.append(
+        f"decision {decision} value={value} source={source} held={held} "
+        f"changed={str(changed_latest).lower()}{extra}"
+    )
+    return lines
 
 
 def main(argv: Optional[list[str]] = None) -> int:
@@ -471,27 +596,15 @@ def main(argv: Optional[list[str]] = None) -> int:
         traceback.print_exc()
         return 1
 
-    print(result["table"])
-    print(
-        json.dumps(
-            {
-                "decision": result["decision"],
-                "value": result["value"],
-                "source": result["source"],
-                "changed_latest": result["changed_latest"],
-                "wrote_latest": result["wrote_latest"],
-                "wrote_history": result["wrote_history"],
-                "wrote_status": result["wrote_status"],
-                "warnings": result["warnings"],
-            },
-            ensure_ascii=False,
-        )
-    )
+    # Compact logs only (one line per source + decision) — keep noise low for Actions
+    for line in result.get("compact_log") or []:
+        print(line, flush=True)
+    if result.get("post_check_failed"):
+        print(f"post_check_failed {result.get('validation_error')}", flush=True)
     if args.dry_run and result.get("latest") and (repo_root / "latest.json").exists():
         prev = load_json(repo_root / "latest.json")
-        print("\n## Diff vs committed latest.json (semantic)", flush=True)
         print(
-            f"changed={latest_changed(prev, result['latest'])}",
+            f"dry_diff_changed={latest_changed(prev, result['latest'])}",
             flush=True,
         )
     return 0
