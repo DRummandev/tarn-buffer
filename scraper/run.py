@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
-from .cards import baghdad_candidates_from_rows, build_cards
+from .cards import _newest_ok, baghdad_candidates_from_rows, build_cards
 from .common import fetch, now_baghdad, rfc3339
 from .config import ConfigError, default_config_path, load_sources_config
 from .dinarlive import parse_dinarlive
@@ -41,6 +41,16 @@ from .outputs import (
     write_json,
 )
 from .selector import Candidate, select_card, merge_card_state
+
+# Compact-log / status ``newest=`` filter — must match selector primary market/kind.
+# For tg_kifah, other markets in the same channel are logged under their own labels.
+_PRIMARY_NEWEST_FILTER: dict[str, tuple[Optional[str], Optional[str]]] = {
+    "tg_kifah": ("kifah", "bursa"),
+    "tg_dollariraqi": ("baghdad", "bursa"),
+    "info4iq": ("kifah", None),
+    "iraqsm": ("parallel", "bursa"),
+    "dinarlive_erbil": ("erbil", None),
+}
 
 SOURCES_URLS = {
     "tg_kifah": "https://t.me/s/borsat_alkfah",
@@ -108,11 +118,7 @@ def _fetch_one(name: str, url: str) -> dict[str, Any]:
                 if fetch_ok:
                     rows, parse_err = _parse_source(name, body, fetched_at)
     ok = fetch_ok and not parse_err
-    last_ok_post = ""
-    if ok:
-        for r in rows:
-            if r.parse_status == "ok" and r.post_time and r.post_time > last_ok_post:
-                last_ok_post = r.post_time
+    last_ok_post = _primary_last_ok_post_time(name, rows) if ok else None
     return {
         "source": name,
         "fetch_ok": ok,
@@ -120,7 +126,7 @@ def _fetch_one(name: str, url: str) -> dict[str, Any]:
         "rows": rows,
         "http_status": status,
         "ms": ms,
-        "last_ok_post_time": last_ok_post or None,
+        "last_ok_post_time": last_ok_post,
         "ok": ok,
     }
 
@@ -146,18 +152,14 @@ def _load_fixtures(fixtures_dir: Path, fetched_at: datetime) -> dict[str, dict[s
         body = path.read_bytes()
         rows, parse_err = _parse_source(name, body, fetched_at)
         ok = not parse_err
-        last_ok_post = ""
-        if ok:
-            for r in rows:
-                if r.parse_status == "ok" and r.post_time and r.post_time > last_ok_post:
-                    last_ok_post = r.post_time
+        last_ok_post = _primary_last_ok_post_time(name, rows) if ok else None
         out[name] = {
             "source": name,
             "fetch_ok": ok,
             "error_class": None if ok else parse_err,
             "rows": rows,
             "ok": ok,
-            "last_ok_post_time": last_ok_post or None,
+            "last_ok_post_time": last_ok_post,
         }
     return out
 
@@ -377,13 +379,7 @@ def run_pipeline(
     )
 
     source_results = {
-        sid: {
-            "ok": bool(info.get("ok")),
-            "error_class": info.get("error_class"),
-            "last_ok_post_time": info.get("last_ok_post_time"),
-            "ms": info.get("ms"),
-            "newest_value": _newest_ok_value(info),
-        }
+        sid: _source_newest_diag(sid, info)
         for sid, info in by_source.items()
     }
     parser_drift = _detect_parser_drift(by_source.get("tg_kifah") or {})
@@ -477,16 +473,77 @@ def run_pipeline(
     return result
 
 
-def _newest_ok_value(info: dict[str, Any]) -> Optional[float]:
+def _primary_newest_row(sid: str, rows: list[Row]) -> Optional[Row]:
+    """Newest parse-ok row for this source's official market/kind (selector match)."""
+    filt = _PRIMARY_NEWEST_FILTER.get(sid)
+    if filt is None:
+        # Fallback: any ok row with a mid (should not happen for known sources).
+        ok = [r for r in rows if r.parse_status == "ok" and r.mid is not None]
+        if not ok:
+            return None
+        return sorted(ok, key=lambda r: r.post_time or "", reverse=True)[0]
+    market, kind = filt
+    assert market is not None
+    return _newest_ok(rows, market=market, kind=kind)
+
+
+def _primary_last_ok_post_time(sid: str, rows: list[Row]) -> Optional[str]:
+    row = _primary_newest_row(sid, rows)
+    return row.post_time if row and row.post_time else None
+
+
+def _other_market_newest(sid: str, rows: list[Row]) -> list[dict[str, Any]]:
+    """Per-market newest ok rows that are *not* the official primary (tg_kifah only).
+
+    Example: ``بغداد طلب`` → market=baghdad must not become Kifah ``newest=``.
+    """
+    if sid != "tg_kifah":
+        return []
+    primary_market, _primary_kind = _PRIMARY_NEWEST_FILTER["tg_kifah"]
+    markets = sorted(
+        {
+            r.market
+            for r in rows
+            if r.parse_status == "ok"
+            and r.mid is not None
+            and r.market
+            and r.market != primary_market
+        }
+    )
+    out: list[dict[str, Any]] = []
+    for market in markets:
+        row = _newest_ok(rows, market=market, kind="bursa")
+        if row is None:
+            row = _newest_ok(rows, market=market)
+        if row is None or row.mid is None:
+            continue
+        out.append(
+            {
+                "market": market,
+                "value": float(row.mid),
+                "post_time": row.post_time or None,
+            }
+        )
+    return out
+
+
+def _source_newest_diag(sid: str, info: dict[str, Any]) -> dict[str, Any]:
+    """Diagnostics for compact log + status: official newest, never a wrong market."""
     rows: list[Row] = list(info.get("rows") or [])
-    best: Optional[float] = None
-    best_t = ""
-    for r in rows:
-        if r.parse_status == "ok" and r.mid is not None and r.post_time:
-            if r.post_time >= best_t:
-                best_t = r.post_time
-                best = float(r.mid)
-    return best
+    primary = _primary_newest_row(sid, rows) if info.get("ok") or rows else None
+    newest_value = float(primary.mid) if primary and primary.mid is not None else None
+    last_ok = primary.post_time if primary and primary.post_time else None
+    # Prefer freshly computed primary time; fall back to fetch-time stamp if rows empty.
+    if last_ok is None:
+        last_ok = info.get("last_ok_post_time")
+    return {
+        "ok": bool(info.get("ok")),
+        "error_class": info.get("error_class"),
+        "last_ok_post_time": last_ok,
+        "ms": info.get("ms"),
+        "newest_value": newest_value,
+        "other_markets": _other_market_newest(sid, rows),
+    }
 
 
 def _detect_parser_drift(kifah_info: dict[str, Any]) -> dict[str, Any]:
@@ -547,23 +604,29 @@ def compact_run_log(
 ) -> list[str]:
     """One compact line per source + explicit published + decision lines.
 
-    Per-source lines show newest ok fetch diagnostics (labelled). The selected
-    official quote is logged separately as ``published value=… source=…`` so
-    it is never confused with the newest ok row.
+    Per-source ``newest=`` is the official market/kind for that source (for
+    ``tg_kifah``: market=kifah + kind=bursa only). Other markets from the same
+    channel are appended as ``<market>=<value> <time>`` so they are never
+    mistaken for the official كفاح print. The selected quote is logged
+    separately as ``published value=… source=…``.
     """
     lines: list[str] = []
     for sid in ("tg_kifah", "tg_dollariraqi", "info4iq", "iraqsm", "dinarlive_erbil"):
         info = by_source.get(sid) or {}
         sr = source_results.get(sid) or {}
-        ok = bool(info.get("ok"))
+        ok = bool(info.get("ok") if "ok" in info else sr.get("ok"))
         flag = "ok" if ok else "FAIL"
         err = "-" if ok else (info.get("error_class") or sr.get("error_class") or "unknown")
-        ms = info.get("ms")
+        ms = info.get("ms") if info.get("ms") is not None else sr.get("ms")
         latency = f"{ms}ms" if ms is not None else "-"
         newest_s = _fmt_compact_num(sr.get("newest_value"))
-        newest_t = info.get("last_ok_post_time") or "-"
+        newest_t = sr.get("last_ok_post_time") or info.get("last_ok_post_time") or "-"
+        extra = ""
+        for om in sr.get("other_markets") or []:
+            m = om.get("market") or "?"
+            extra += f" {m}={_fmt_compact_num(om.get('value'))} {om.get('post_time') or '-'}"
         lines.append(
-            f"{sid} {flag} {err} {latency} newest={newest_s} {newest_t}"
+            f"{sid} {flag} {err} {latency} newest={newest_s} {newest_t}{extra}"
         )
     held = getattr(baghdad, "held_reason", None) or "-"
     decision = getattr(baghdad, "decision", "-")
