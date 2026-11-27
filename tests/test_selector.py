@@ -169,6 +169,36 @@ class TestTradingTime(unittest.TestCase):
             )
         )
 
+    def test_thu_print_fresh_on_fri_evening(self):
+        """Thu 13:55 → Fri 19:25 is still fresh (~95 market minutes); generated_at irrelevant."""
+        post = _dt("2026-11-26T13:55:19+03:00")
+        fri_evening = _dt("2026-11-27T19:25:00+03:00")
+        # 13:55:19 → Thu close 15:30 = 94.683… market minutes; Fri adds zero.
+        mins = market_minutes_between(post, fri_evening)
+        self.assertGreater(mins, 94.0)
+        self.assertLess(mins, 95.0)
+        self.assertFalse(
+            is_stale(
+                post,
+                fri_evening,
+                stale_trading_hours=4,
+                trading_days=CFG.trading_days,
+                trading_window=CFG.trading_window,
+            )
+        )
+        # Selector must keep primary (not fail over) over the weekend close.
+        cands = {
+            "tg_kifah": _cand("tg_kifah", 168800, "2026-11-26T13:55:19+03:00"),
+            "tg_dollariraqi": _cand("tg_dollariraqi", 169000, "2026-11-26T13:50:00+03:00"),
+            "info4iq": _fail("info4iq"),
+            "iraqsm": _fail("iraqsm"),
+        }
+        dec = select_card("baghdad", cands, None, fri_evening, CFG)
+        self.assertEqual(dec.decision, "show_primary")
+        self.assertEqual(dec.value, 168800)
+        self.assertEqual(dec.source, "tg_kifah")
+        self.assertFalse(dec.stale)
+
 
 class TestSelectorCore(unittest.TestCase):
     def test_01_normal_primary(self):

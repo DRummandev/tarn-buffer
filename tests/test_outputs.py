@@ -225,7 +225,19 @@ class TestCompactLog(unittest.TestCase):
                     "last_ok_post_time": "2026-11-26T13:55:19+03:00",
                 }
             },
-            source_results={"tg_kifah": {"newest_value": 169999.0}},
+            source_results={
+                "tg_kifah": {
+                    "newest_value": 168800.0,
+                    "last_ok_post_time": "2026-11-26T13:55:19+03:00",
+                    "other_markets": [
+                        {
+                            "market": "baghdad",
+                            "value": 169999.0,
+                            "post_time": "2026-11-27T14:28:24+03:00",
+                        }
+                    ],
+                }
+            },
             baghdad=dec,
             changed_latest=False,
         )
@@ -233,9 +245,178 @@ class TestCompactLog(unittest.TestCase):
         self.assertEqual(len(published), 1)
         self.assertIn("value=168800", published[0])
         self.assertIn("source=tg_kifah", published[0])
-        # newest ok fetch row must not be mistaken for published
-        self.assertTrue(any("newest=169999" in ln for ln in lines))
+        kifah_line = next(ln for ln in lines if ln.startswith("tg_kifah "))
+        # Official كفاح newest=; other-market row under its own label
+        self.assertIn("newest=168800", kifah_line)
+        self.assertIn("baghdad=169999", kifah_line)
+        self.assertNotIn("newest=169999", kifah_line)
         self.assertFalse(any(ln.startswith("decision ") and "value=" in ln for ln in lines))
+
+    def test_kifah_newest_ignores_baghdad_talab(self):
+        """بغداد طلب must not become tg_kifah newest=; published stays كفاح."""
+        from scraper.run import _source_newest_diag
+
+        now = _dt("2026-11-27T19:25:00+03:00")  # Friday evening
+        by_source = {
+            "tg_kifah": {
+                "source": "tg_kifah",
+                "fetch_ok": True,
+                "ok": True,
+                "ms": 802,
+                "rows": [
+                    Row(
+                        source="tg_kifah",
+                        fetched_at=rfc3339(now),
+                        market="baghdad",
+                        kind="bursa",
+                        mid=168600,
+                        post_time="2026-11-27T14:28:24+03:00",
+                        post_id="borsat_alkfah/30594",
+                        parse_status="ok",
+                        text="168,600 بغداد طلب",
+                    ),
+                    Row(
+                        source="tg_kifah",
+                        fetched_at=rfc3339(now),
+                        market="kifah",
+                        kind="bursa",
+                        mid=168800,
+                        post_time="2026-11-26T13:55:19+03:00",
+                        post_id="borsat_alkfah/30588",
+                        parse_status="ok",
+                        text="🟢 كفاح 168,800",
+                    ),
+                ],
+            },
+            "tg_dollariraqi": {
+                "fetch_ok": False,
+                "ok": False,
+                "error_class": "http_429",
+                "rows": [],
+            },
+            "info4iq": {"fetch_ok": False, "ok": False, "error_class": "x", "rows": []},
+            "iraqsm": {"fetch_ok": False, "ok": False, "error_class": "x", "rows": []},
+            "dinarlive_erbil": {
+                "fetch_ok": False,
+                "ok": False,
+                "error_class": "x",
+                "rows": [],
+            },
+        }
+        diag = _source_newest_diag("tg_kifah", by_source["tg_kifah"])
+        self.assertEqual(diag["newest_value"], 168800.0)
+        self.assertEqual(diag["last_ok_post_time"], "2026-11-26T13:55:19+03:00")
+        self.assertEqual(
+            diag["other_markets"],
+            [
+                {
+                    "market": "baghdad",
+                    "value": 168600.0,
+                    "post_time": "2026-11-27T14:28:24+03:00",
+                }
+            ],
+        )
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "config").mkdir()
+            shutil.copy(ROOT / "config" / "sources.json", root / "config" / "sources.json")
+            result = run_pipeline(
+                repo_root=root,
+                dry_run=True,
+                out_dir=root / "dry-out",
+                now=now,
+                by_source=by_source,
+            )
+        kifah_line = next(ln for ln in result["compact_log"] if ln.startswith("tg_kifah "))
+        self.assertIn("newest=168800", kifah_line)
+        self.assertIn("2026-11-26T13:55:19+03:00", kifah_line)
+        self.assertIn("baghdad=168600", kifah_line)
+        self.assertIn("2026-11-27T14:28:24+03:00", kifah_line)
+        self.assertNotIn("newest=168600", kifah_line)
+        published = next(ln for ln in result["compact_log"] if ln.startswith("published "))
+        self.assertIn("value=168800", published)
+        self.assertIn("source=tg_kifah", published)
+        self.assertIn("stale=false", published)
+        self.assertEqual(result["value"], 168800)
+        self.assertEqual(result["decision"], "show_primary")
+
+    def test_newer_official_kifah_wins_newest_and_published(self):
+        from scraper.run import _source_newest_diag
+
+        now = _dt("2026-11-26T15:00:00+03:00")
+        by_source = {
+            "tg_kifah": {
+                "fetch_ok": True,
+                "ok": True,
+                "ms": 100,
+                "rows": [
+                    Row(
+                        source="tg_kifah",
+                        fetched_at=rfc3339(now),
+                        market="kifah",
+                        kind="bursa",
+                        mid=168900,
+                        post_time="2026-11-26T14:40:00+03:00",
+                        post_id="borsat_alkfah/30599",
+                        parse_status="ok",
+                    ),
+                    Row(
+                        source="tg_kifah",
+                        fetched_at=rfc3339(now),
+                        market="baghdad",
+                        kind="bursa",
+                        mid=168600,
+                        post_time="2026-11-26T14:50:00+03:00",
+                        post_id="borsat_alkfah/30600",
+                        parse_status="ok",
+                    ),
+                    Row(
+                        source="tg_kifah",
+                        fetched_at=rfc3339(now),
+                        market="kifah",
+                        kind="bursa",
+                        mid=168800,
+                        post_time="2026-11-26T13:55:19+03:00",
+                        post_id="borsat_alkfah/30588",
+                        parse_status="ok",
+                    ),
+                ],
+            },
+            "tg_dollariraqi": {
+                "fetch_ok": False,
+                "ok": False,
+                "error_class": "x",
+                "rows": [],
+            },
+            "info4iq": {"fetch_ok": False, "ok": False, "error_class": "x", "rows": []},
+            "iraqsm": {"fetch_ok": False, "ok": False, "error_class": "x", "rows": []},
+            "dinarlive_erbil": {
+                "fetch_ok": False,
+                "ok": False,
+                "error_class": "x",
+                "rows": [],
+            },
+        }
+        diag = _source_newest_diag("tg_kifah", by_source["tg_kifah"])
+        self.assertEqual(diag["newest_value"], 168900.0)
+        self.assertEqual(diag["last_ok_post_time"], "2026-11-26T14:40:00+03:00")
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "config").mkdir()
+            shutil.copy(ROOT / "config" / "sources.json", root / "config" / "sources.json")
+            result = run_pipeline(
+                repo_root=root,
+                dry_run=True,
+                out_dir=root / "dry-out",
+                now=now,
+                by_source=by_source,
+            )
+        self.assertEqual(result["value"], 168900)
+        self.assertEqual(result["source"], "tg_kifah")
+        kifah_line = next(ln for ln in result["compact_log"] if ln.startswith("tg_kifah "))
+        self.assertIn("newest=168900", kifah_line)
+        self.assertIn("baghdad=168600", kifah_line)
 
 
 class TestSourcesMapKeepLastGood(unittest.TestCase):
