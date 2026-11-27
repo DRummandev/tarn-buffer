@@ -4,7 +4,7 @@
       "ok": true,
       "last_error_class": null,
       "first_failure_at": null,
-      "last_ok_post_time": "2026-11-27T15:30:02+03:00"
+      "last_ok_post_time": "2026-11-27T20:00:02+03:00"
     },
     "info4iq": {
       "ok": true,
@@ -16,19 +16,19 @@
       "ok": true,
       "last_error_class": null,
       "first_failure_at": null,
-      "last_ok_post_time": "2026-11-27T14:28:24+03:00"
+      "last_ok_post_time": "2026-11-26T13:55:19+03:00"
     },
     "tg_dollariraqi": {
       "ok": true,
       "last_error_class": null,
       "first_failure_at": null,
-      "last_ok_post_time": "2026-11-26T23:24:32+03:00"
+      "last_ok_post_time": "2026-11-27T23:35:48+03:00"
     },
     "iraqsm": {
       "ok": true,
       "last_error_class": null,
       "first_failure_at": null,
-      "last_ok_post_time": "2026-11-27T19:14:17+03:00"
+      "last_ok_post_time": "2026-11-27T21:52:22+03:00"
     }
   },
   "primary_ok": true,
@@ -37,7 +37,7 @@
   "parser_drift": {
     "active": false,
     "since": null,
-    "ok_kifah_rows": 3,
+    "ok_kifah_rows": 2,
     "rate_looking": true,
     "http_ok": true
   },
