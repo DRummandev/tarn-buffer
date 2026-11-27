@@ -1,0 +1,75 @@
+{
+  "name": "Kifah dead then recovered",
+  "config_overrides": {},
+  "runs": [
+    {
+      "now": "2026-11-26T14:00:00+03:00",
+      "sources": {
+        "tg_kifah": {"fetch_ok": false, "error_class": "http_429", "rows": []},
+        "tg_dollariraqi": {
+          "fetch_ok": true,
+          "rows": [
+            {
+              "source": "tg_dollariraqi",
+              "market": "baghdad",
+              "kind": "bursa",
+              "mid": 169000,
+              "post_time": "2026-11-26T13:50:00+03:00",
+              "post_id": "dollariraqi/6612",
+              "parse_status": "ok"
+            }
+          ]
+        }
+      },
+      "expect": {
+        "card": "baghdad",
+        "decision": "show_failover",
+        "value": 169000,
+        "stale": false,
+        "held_reason": "source_failover",
+        "warnings_contain": ["failover_because:tg_kifah="]
+      }
+    },
+    {
+      "now": "2026-11-26T14:05:00+03:00",
+      "sources": {
+        "tg_kifah": {
+          "fetch_ok": true,
+          "rows": [
+            {
+              "source": "tg_kifah",
+              "market": "kifah",
+              "kind": "bursa",
+              "mid": 168850,
+              "post_time": "2026-11-26T14:02:00+03:00",
+              "post_id": "borsat_alkfah/30599",
+              "parse_status": "ok"
+            }
+          ]
+        },
+        "tg_dollariraqi": {
+          "fetch_ok": true,
+          "rows": [
+            {
+              "source": "tg_dollariraqi",
+              "market": "baghdad",
+              "kind": "bursa",
+              "mid": 169000,
+              "post_time": "2026-11-26T13:50:00+03:00",
+              "post_id": "dollariraqi/6612",
+              "parse_status": "ok"
+            }
+          ]
+        }
+      },
+      "expect": {
+        "card": "baghdad",
+        "decision": "show_primary",
+        "value": 168850,
+        "stale": false,
+        "held_reason": null,
+        "warnings_contain": []
+      }
+    }
+  ]
+}

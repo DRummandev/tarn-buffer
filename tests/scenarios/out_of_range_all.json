@@ -1,0 +1,70 @@
+{
+  "name": "out-of-range from every source",
+  "config_overrides": {},
+  "runs": [
+    {
+      "now": "2026-11-26T14:00:00+03:00",
+      "sources": {
+        "tg_kifah": {
+          "fetch_ok": true,
+          "rows": [
+            {
+              "source": "tg_kifah",
+              "market": "kifah",
+              "kind": "bursa",
+              "mid": 16880,
+              "post_time": "2026-11-26T13:55:00+03:00",
+              "parse_status": "ok"
+            }
+          ]
+        },
+        "tg_dollariraqi": {
+          "fetch_ok": true,
+          "rows": [
+            {
+              "source": "tg_dollariraqi",
+              "market": "baghdad",
+              "kind": "bursa",
+              "mid": 1688000,
+              "post_time": "2026-11-26T13:55:00+03:00",
+              "parse_status": "ok"
+            }
+          ]
+        },
+        "info4iq": {
+          "fetch_ok": true,
+          "rows": [
+            {
+              "source": "info4iq",
+              "market": "kifah",
+              "kind": "bursa",
+              "mid": 50000,
+              "post_time": "2026-11-26T13:55:00+03:00",
+              "parse_status": "ok"
+            }
+          ]
+        },
+        "iraqsm": {
+          "fetch_ok": true,
+          "rows": [
+            {
+              "source": "iraqsm",
+              "market": "parallel",
+              "kind": "bursa",
+              "mid": 999999,
+              "post_time": "2026-11-26T13:55:00+03:00",
+              "parse_status": "ok"
+            }
+          ]
+        }
+      },
+      "expect": {
+        "card": "baghdad",
+        "decision": "no_value",
+        "value": null,
+        "stale": false,
+        "held_reason": "all_stale"
+      }
+    }
+  ]
+}

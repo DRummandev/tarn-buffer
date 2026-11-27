@@ -1,0 +1,106 @@
+name: scrape
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry-run (write dry-out/, do not commit)"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: scrape
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Resolve mode
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "dry_run=false" >> "$GITHUB_OUTPUT"
+          else
+            DR="${{ inputs.dry_run }}"
+            if [ "$DR" = "false" ]; then
+              echo "dry_run=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "dry_run=true" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Run scraper (dry-run)
+        if: steps.mode.outputs.dry_run == 'true'
+        run: |
+          python -m scraper.run --dry-run --out dry-out | tee /tmp/scrape-out.txt
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            {
+              echo "# Scrape dry-run"
+              echo
+              cat /tmp/scrape-out.txt
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload dry-out
+        if: steps.mode.outputs.dry_run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dry-out
+          path: dry-out/
+          retention-days: 14
+
+      - name: Run scraper (live)
+        if: steps.mode.outputs.dry_run != 'true'
+        run: |
+          python -m scraper.run | tee /tmp/scrape-out.txt
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            {
+              echo "# Scrape live"
+              echo
+              cat /tmp/scrape-out.txt
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          git status --porcelain || true
+
+      - name: Commit and push if changed
+        if: steps.mode.outputs.dry_run != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add latest.json history status.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No semantic changes to commit."
+            exit 0
+          fi
+          git commit -m "u"
+          for i in 1 2 3; do
+            git pull --rebase origin main || true
+            if git push origin HEAD:main; then
+              echo "Pushed."
+              exit 0
+            fi
+            echo "Push conflict, retry $i…"
+            sleep $((i * 2))
+          done
+          echo "Push failed after retries" >&2
+          exit 1
+
+      - name: Purge jsDelivr (best-effort)
+        if: steps.mode.outputs.dry_run != 'true'
+        continue-on-error: true
+        run: |
+          curl -fsS -X POST "https://purge.jsdelivr.net/gh/DRummandev/tarn-buffer@main/latest.json" || true

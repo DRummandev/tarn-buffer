@@ -1,0 +1,71 @@
+{
+  "name": "5% glitch value from dollariraqi alone",
+  "config_overrides": {},
+  "runs": [
+    {
+      "now": "2026-11-26T14:00:00+03:00",
+      "sources": {
+        "tg_kifah": {
+          "fetch_ok": true,
+          "rows": [
+            {
+              "source": "tg_kifah",
+              "market": "kifah",
+              "kind": "bursa",
+              "mid": 168800,
+              "post_time": "2026-11-26T13:55:00+03:00",
+              "post_id": "borsat_alkfah/30588",
+              "parse_status": "ok"
+            }
+          ]
+        },
+        "tg_dollariraqi": {
+          "fetch_ok": true,
+          "rows": [
+            {
+              "source": "tg_dollariraqi",
+              "market": "baghdad",
+              "kind": "bursa",
+              "mid": 169000,
+              "post_time": "2026-11-26T13:50:00+03:00",
+              "parse_status": "ok"
+            }
+          ]
+        }
+      },
+      "expect": {
+        "card": "baghdad",
+        "decision": "show_primary",
+        "value": 168800,
+        "stale": false,
+        "held_reason": null
+      }
+    },
+    {
+      "now": "2026-11-26T14:05:00+03:00",
+      "sources": {
+        "tg_kifah": {"fetch_ok": false, "error_class": "timeout", "rows": []},
+        "tg_dollariraqi": {
+          "fetch_ok": true,
+          "rows": [
+            {
+              "source": "tg_dollariraqi",
+              "market": "baghdad",
+              "kind": "bursa",
+              "mid": 177240,
+              "post_time": "2026-11-26T14:04:00+03:00",
+              "parse_status": "ok"
+            }
+          ]
+        }
+      },
+      "expect": {
+        "card": "baghdad",
+        "decision": "hold_unconfirmed_jump",
+        "value": 168800,
+        "held_reason": "unconfirmed_jump",
+        "warnings_contain": ["unconfirmed"]
+      }
+    }
+  ]
+}
