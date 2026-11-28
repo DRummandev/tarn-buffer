@@ -1,16 +1,16 @@
 {
   "sources": {
-    "info4iq": {
-      "ok": true,
-      "last_error_class": null,
-      "first_failure_at": null,
-      "last_ok_post_time": "2026-11-28T11:06:10+03:00"
-    },
     "dinarlive_erbil": {
       "ok": true,
       "last_error_class": null,
       "first_failure_at": null,
       "last_ok_post_time": "2026-11-28T08:19:28+03:00"
+    },
+    "info4iq": {
+      "ok": true,
+      "last_error_class": null,
+      "first_failure_at": null,
+      "last_ok_post_time": "2026-11-28T11:06:10+03:00"
     },
     "tg_kifah": {
       "ok": true,
@@ -28,7 +28,7 @@
       "ok": true,
       "last_error_class": null,
       "first_failure_at": null,
-      "last_ok_post_time": "2026-11-28T18:27:53+03:00"
+      "last_ok_post_time": "2026-11-28T18:51:13+03:00"
     }
   },
   "primary_ok": true,
