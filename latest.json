@@ -2,8 +2,9 @@
   "ok": true,
   "app": "شكد سعر الدولار؟",
   "schema": 2,
-  "fetchedAt": "2026-11-28T15:47:39.887487+03:00",
-  "generated_at": "2026-11-28T15:47:39.887487+03:00",
+  "fetchedAt": "2026-11-28T16:12:41.055326+03:00",
+  "generated_at": "2026-11-28T16:12:41.055326+03:00",
+  "last_scrape_at": "2026-11-28T16:12:41.055326+03:00",
   "unit": "IQD_per_100_USD",
   "value": 167000.0,
   "bid": null,
@@ -209,6 +210,7 @@
   "policy": {
     "stale_trading_hours": 4.0,
     "trading_days": [
+      "Sat",
       "Sun",
       "Mon",
       "Tue",
@@ -221,7 +223,13 @@
     ],
     "sanity_min": 120000,
     "sanity_max": 220000,
-    "config_version": 1
+    "config_version": 2,
+    "trading_window_by_day": {
+      "Sat": [
+        "10:00",
+        "12:30"
+      ]
+    }
   },
   "cards": [
     {
