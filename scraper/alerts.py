@@ -16,10 +16,17 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional, Sequence
+from typing import Any, Mapping, Optional, Sequence
 
 from .common import BAGHDAD, rfc3339
-from .tradingtime import market_minutes_between
+from .tradingtime import (
+    DEFAULT_TRADING_DAYS,
+    DEFAULT_TRADING_WINDOW,
+    DEFAULT_TRADING_WINDOW_BY_DAY,
+    day_name,
+    market_minutes_between,
+    resolve_trading_window,
+)
 
 UTC = timezone.utc
 
@@ -34,9 +41,6 @@ PRIMARY_SOURCE = "tg_kifah"
 FAIL_OPEN_MINUTES = 30.0
 PARSER_DRIFT_MARKET_HOURS = 24.0
 KEEPALIVE_MIN_AGE_DAYS = 6.0
-
-DEFAULT_TRADING_DAYS = ("Sun", "Mon", "Tue", "Wed", "Thu")
-DEFAULT_TRADING_WINDOW = ("10:00", "15:30")
 
 
 @dataclass(frozen=True)
@@ -92,14 +96,25 @@ def is_market_time(
     *,
     trading_days: Sequence[str] = DEFAULT_TRADING_DAYS,
     trading_window: tuple[str, str] = DEFAULT_TRADING_WINDOW,
+    trading_window_by_day: Optional[Mapping[str, tuple[str, str]]] = None,
 ) -> bool:
-    """True when `now` falls inside a trading day ∩ trading window (Baghdad)."""
+    """True when `now` falls inside a trading day ∩ that day's window (Baghdad)."""
     n = _ensure_aware(now).astimezone(BAGHDAD)
-    names = {0: "Mon", 1: "Tue", 2: "Wed", 3: "Thu", 4: "Fri", 5: "Sat", 6: "Sun"}
-    if names[n.weekday()] not in set(trading_days):
+    name = day_name(n)
+    if name not in set(trading_days):
         return False
-    wh0, wm0 = map(int, trading_window[0].split(":"))
-    wh1, wm1 = map(int, trading_window[1].split(":"))
+    by_day = (
+        trading_window_by_day
+        if trading_window_by_day is not None
+        else DEFAULT_TRADING_WINDOW_BY_DAY
+    )
+    win = resolve_trading_window(
+        name,
+        trading_window=trading_window,
+        trading_window_by_day=by_day,
+    )
+    wh0, wm0 = map(int, win[0].split(":"))
+    wh1, wm1 = map(int, win[1].split(":"))
     open_t = n.replace(hour=wh0, minute=wm0, second=0, microsecond=0)
     close_t = n.replace(hour=wh1, minute=wm1, second=0, microsecond=0)
     return open_t <= n < close_t
@@ -213,6 +228,7 @@ def decide_alerts(
     *,
     trading_days: Sequence[str] = DEFAULT_TRADING_DAYS,
     trading_window: tuple[str, str] = DEFAULT_TRADING_WINDOW,
+    trading_window_by_day: Optional[Mapping[str, tuple[str, str]]] = None,
     fail_open_minutes: float = FAIL_OPEN_MINUTES,
     parser_drift_market_hours: float = PARSER_DRIFT_MARKET_HOURS,
 ) -> list[AlertAction]:
@@ -223,6 +239,11 @@ def decide_alerts(
     now = _ensure_aware(now)
     actions: list[AlertAction] = []
     status = dict(status or {})
+    by_day = (
+        trading_window_by_day
+        if trading_window_by_day is not None
+        else DEFAULT_TRADING_WINDOW_BY_DAY
+    )
     # Prefer explicit arg; fall back to status field
     has_cand = bool(selector_has_candidate)
     if "selector_has_candidate" in status:
@@ -236,7 +257,12 @@ def decide_alerts(
         oldest = _oldest_failure_at(status)
         if _age_minutes(oldest, now) >= fail_open_minutes:
             want_a = True
-    elif not has_cand and is_market_time(now, trading_days=trading_days, trading_window=trading_window):
+    elif not has_cand and is_market_time(
+        now,
+        trading_days=trading_days,
+        trading_window=trading_window,
+        trading_window_by_day=by_day,
+    ):
         since = _parse_iso(status.get("selector_no_candidate_since"))
         if since is not None and _age_minutes(since, now) >= fail_open_minutes:
             want_a = True
@@ -308,6 +334,7 @@ def decide_alerts(
             now,
             trading_days=trading_days,
             trading_window=trading_window,
+            trading_window_by_day=by_day,
         )
         if mins >= parser_drift_market_hours * 60.0:
             want_c = True

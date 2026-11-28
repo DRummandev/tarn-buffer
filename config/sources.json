@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "baghdad_order": ["tg_kifah", "tg_dollariraqi", "info4iq", "iraqsm"],
   "erbil_order": ["tg_kifah", "tg_dollariraqi", "dinarlive_erbil"],
   "sanity_min": 120000,
@@ -8,8 +8,11 @@
   "jump_pct": 3,
   "confirm_tol_pct": 1,
   "diff_warn_pct": 1,
-  "trading_days": ["Sun", "Mon", "Tue", "Wed", "Thu"],
+  "trading_days": ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu"],
   "trading_window": ["10:00", "15:30"],
+  "trading_window_by_day": {
+    "Sat": ["10:00", "12:30"]
+  },
   "enabled": {
     "tg_kifah": true,
     "tg_dollariraqi": true,

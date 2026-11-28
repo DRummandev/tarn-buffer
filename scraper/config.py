@@ -35,6 +35,7 @@ class SourcesConfig:
     diff_warn_pct: float
     trading_days: list[str]
     trading_window: tuple[str, str]
+    trading_window_by_day: dict[str, tuple[str, str]]
     enabled: dict[str, bool]
 
     def is_enabled(self, source_id: str) -> bool:
@@ -116,6 +117,14 @@ def validate_config_dict(raw: Any) -> SourcesConfig:
             raise ConfigError(f"trading_days: unknown day {d!r}")
         days.append(d)
     window = _validate_window(_require(raw, "trading_window"))
+    by_day_raw = raw.get("trading_window_by_day") or {}
+    if not isinstance(by_day_raw, dict):
+        raise ConfigError("trading_window_by_day must be an object")
+    by_day: dict[str, tuple[str, str]] = {}
+    for day_name, day_win in by_day_raw.items():
+        if day_name not in DAY_NAMES:
+            raise ConfigError(f"trading_window_by_day: unknown day {day_name!r}")
+        by_day[day_name] = _validate_window(day_win)
     enabled_raw = _require(raw, "enabled")
     if not isinstance(enabled_raw, dict):
         raise ConfigError("enabled must be an object")
@@ -141,6 +150,7 @@ def validate_config_dict(raw: Any) -> SourcesConfig:
         diff_warn_pct=diff_warn,
         trading_days=days,
         trading_window=window,
+        trading_window_by_day=by_day,
         enabled=enabled,
     )
 
@@ -174,6 +184,9 @@ def apply_overrides(cfg: SourcesConfig, overrides: Optional[dict[str, Any]]) -> 
         "diff_warn_pct": cfg.diff_warn_pct,
         "trading_days": list(cfg.trading_days),
         "trading_window": list(cfg.trading_window),
+        "trading_window_by_day": {
+            k: list(v) for k, v in cfg.trading_window_by_day.items()
+        },
         "enabled": dict(cfg.enabled),
     }
     for k, v in overrides.items():

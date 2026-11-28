@@ -128,44 +128,64 @@ def _fail(sid: str, err: str = "http_429") -> Candidate:
 
 
 class TestTradingTime(unittest.TestCase):
-    def test_weekend_not_counted(self):
-        # Thu 13:55 → Sun 10:30 = 95 (Thu) + 30 (Sun) = 125 minutes
+    def test_friday_closed_saturday_counts(self):
+        # Sat–Thu trading; Sat window 10:00–12:30; Fri closed.
+        # Thu 13:55 → Fri noon = 95 (Thu only)
+        # Thu 13:55 → Sat 12:00 = 95 + 120 (Sat 10:00–12:00) = 215
+        # Thu 13:55 goes stale during Sat session (95 + 145 = 240 at Sat 12:25)
         post = _dt("2026-11-26T13:55:00+03:00")  # Thursday
         fri = _dt("2026-11-27T12:00:00+03:00")
-        sat = _dt("2026-11-28T12:00:00+03:00")
-        sun1030 = _dt("2026-11-29T10:30:00+03:00")
-        self.assertEqual(market_minutes_between(post, fri), 95.0)
-        self.assertEqual(market_minutes_between(post, sat), 95.0)
-        self.assertEqual(market_minutes_between(post, sun1030), 125.0)
+        sat_noon = _dt("2026-11-28T12:00:00+03:00")
+        self.assertEqual(
+            market_minutes_between(
+                post,
+                fri,
+                trading_days=CFG.trading_days,
+                trading_window=CFG.trading_window,
+                trading_window_by_day=CFG.trading_window_by_day,
+            ),
+            95.0,
+        )
+        self.assertEqual(
+            market_minutes_between(
+                post,
+                sat_noon,
+                trading_days=CFG.trading_days,
+                trading_window=CFG.trading_window,
+                trading_window_by_day=CFG.trading_window_by_day,
+            ),
+            215.0,
+        )
+        sat1225 = _dt("2026-11-28T12:25:00+03:00")
+        self.assertEqual(
+            market_minutes_between(
+                post,
+                sat1225,
+                trading_days=CFG.trading_days,
+                trading_window=CFG.trading_window,
+                trading_window_by_day=CFG.trading_window_by_day,
+            ),
+            240.0,
+        )
         self.assertFalse(
             is_stale(
                 post,
-                sun1030,
+                sat1225,
                 stale_trading_hours=4,
                 trading_days=CFG.trading_days,
                 trading_window=CFG.trading_window,
+                trading_window_by_day=CFG.trading_window_by_day,
             )
         )
-        # after Sunday 12:25 → stale
-        sun1225 = _dt("2026-11-29T12:25:00+03:00")
-        self.assertEqual(market_minutes_between(post, sun1225), 240.0)
-        self.assertFalse(
-            is_stale(
-                post,
-                sun1225,
-                stale_trading_hours=4,
-                trading_days=CFG.trading_days,
-                trading_window=CFG.trading_window,
-            )
-        )
-        sun1225_01 = _dt("2026-11-29T12:25:01+03:00")
+        sat1225_01 = _dt("2026-11-28T12:25:01+03:00")
         self.assertTrue(
             is_stale(
                 post,
-                sun1225_01,
+                sat1225_01,
                 stale_trading_hours=4,
                 trading_days=CFG.trading_days,
                 trading_window=CFG.trading_window,
+                trading_window_by_day=CFG.trading_window_by_day,
             )
         )
 
@@ -184,6 +204,7 @@ class TestTradingTime(unittest.TestCase):
                 stale_trading_hours=4,
                 trading_days=CFG.trading_days,
                 trading_window=CFG.trading_window,
+                trading_window_by_day=CFG.trading_window_by_day,
             )
         )
         # Selector must keep primary (not fail over) over the weekend close.
@@ -281,11 +302,11 @@ class TestSelectorCore(unittest.TestCase):
         self.assertEqual(dec2.value, 168850)
 
     def test_04_weekend_freshness(self):
+        # Thu print stays fresh through Fri and into Sat session; stale after Sat 12:25.
         post = "2026-11-26T13:55:00+03:00"
         for now_s in (
-            "2026-11-27T12:00:00+03:00",
-            "2026-11-28T12:00:00+03:00",
-            "2026-11-29T10:30:00+03:00",
+            "2026-11-27T12:00:00+03:00",  # Friday closed
+            "2026-11-28T12:00:00+03:00",  # Sat still < 240 market minutes
         ):
             cands = {
                 "tg_kifah": _cand("tg_kifah", 168800, post),
@@ -296,7 +317,7 @@ class TestSelectorCore(unittest.TestCase):
             dec = select_card("baghdad", cands, None, _dt(now_s), CFG)
             self.assertEqual(dec.decision, "show_primary", msg=now_s)
             self.assertFalse(dec.stale, msg=now_s)
-        # After Sun 12:25 → stale → hold if no backup
+        # Sat 12:30 → Thu print stale → hold if no backup
         cands = {
             "tg_kifah": _cand("tg_kifah", 168800, post),
             "tg_dollariraqi": _fail("tg_dollariraqi"),
@@ -304,10 +325,23 @@ class TestSelectorCore(unittest.TestCase):
             "iraqsm": _fail("iraqsm"),
         }
         prev = CardState(value=168800, source="tg_kifah", posted_at=post)
-        dec = select_card("baghdad", cands, prev, _dt("2026-11-29T12:30:00+03:00"), CFG)
+        dec = select_card("baghdad", cands, prev, _dt("2026-11-28T12:30:00+03:00"), CFG)
         self.assertEqual(dec.decision, "hold_all_stale")
         self.assertTrue(dec.stale)
         self.assertEqual(dec.stale_since, post)
+        # Sat print remains fresh Sunday morning (Fri closed; Sat short window)
+        sat_post = "2026-11-28T11:00:00+03:00"
+        cands_sat = {
+            "tg_kifah": _cand("tg_kifah", 167000, sat_post),
+            "tg_dollariraqi": _fail("tg_dollariraqi"),
+            "info4iq": _fail("info4iq"),
+            "iraqsm": _fail("iraqsm"),
+        }
+        dec_sun = select_card(
+            "baghdad", cands_sat, None, _dt("2026-11-29T10:30:00+03:00"), CFG
+        )
+        self.assertEqual(dec_sun.decision, "show_primary")
+        self.assertFalse(dec_sun.stale)
 
     def test_05_out_of_range_never_shown(self):
         now = _dt("2026-11-26T14:00:00+03:00")

@@ -1,7 +1,8 @@
 """Build latest.json, history rows, status.json; change detection.
 
-App liveness must never use fetchedAt/generated_at — those are ignored when
-diffing so we do not rewrite latest.json when nothing semantic changed.
+App liveness must never use fetchedAt/generated_at/last_scrape_at — those
+heartbeat fields are ignored when diffing so we do not rewrite latest.json
+(or spam 5-minute commits) when nothing semantic changed.
 Liveness comes from post times + the staleness rule + the policy block.
 """
 
@@ -136,13 +137,17 @@ def post_url_for(source: str, post_id: str) -> str:
     return ""
 
 
+# Heartbeat-only fields: updated every scrape but must not force a git commit.
+_HEARTBEAT_KEYS = frozenset({"fetchedAt", "generated_at", "last_scrape_at"})
+
+
 def semantic_strip(obj: Any) -> Any:
-    """Deep copy omitting fetchedAt/generated_at for change detection."""
+    """Deep copy omitting heartbeat timestamps for change detection."""
     if isinstance(obj, dict):
         return {
             k: semantic_strip(v)
             for k, v in obj.items()
-            if k not in ("fetchedAt", "generated_at")
+            if k not in _HEARTBEAT_KEYS
         }
     if isinstance(obj, list):
         return [semantic_strip(x) for x in obj]
@@ -156,7 +161,7 @@ def latest_changed(prev: Optional[dict[str, Any]], new: dict[str, Any]) -> bool:
 
 
 def build_policy(cfg: SourcesConfig) -> dict[str, Any]:
-    return {
+    policy: dict[str, Any] = {
         "stale_trading_hours": cfg.stale_trading_hours,
         "trading_days": list(cfg.trading_days),
         "trading_window": list(cfg.trading_window),
@@ -164,6 +169,11 @@ def build_policy(cfg: SourcesConfig) -> dict[str, Any]:
         "sanity_max": cfg.sanity_max,
         "config_version": cfg.version,
     }
+    if cfg.trading_window_by_day:
+        policy["trading_window_by_day"] = {
+            k: list(v) for k, v in sorted(cfg.trading_window_by_day.items())
+        }
+    return policy
 
 
 def build_latest(
@@ -182,6 +192,7 @@ def build_latest(
         "schema": 2,
         "fetchedAt": now_iso,
         "generated_at": now_iso,
+        "last_scrape_at": now_iso,
         "unit": "IQD_per_100_USD",
         "value": baghdad.value,
         "bid": baghdad.bid,
