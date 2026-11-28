@@ -83,11 +83,13 @@ class TestChangeDetection(unittest.TestCase):
             "value": 168800,
             "fetchedAt": "2026-11-26T14:00:00+03:00",
             "generated_at": "2026-11-26T14:00:00+03:00",
+            "last_scrape_at": "2026-11-26T14:00:00+03:00",
             "source": "tg_kifah",
         }
         b = dict(a)
         b["fetchedAt"] = "2026-11-26T14:05:00+03:00"
         b["generated_at"] = "2026-11-26T14:05:00+03:00"
+        b["last_scrape_at"] = "2026-11-26T14:05:00+03:00"
         self.assertFalse(latest_changed(a, b))
         b["value"] = 168900
         self.assertTrue(latest_changed(a, b))

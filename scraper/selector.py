@@ -115,6 +115,7 @@ def _classify(
         stale_trading_hours=cfg.stale_trading_hours,
         trading_days=cfg.trading_days,
         trading_window=cfg.trading_window,
+        trading_window_by_day=cfg.trading_window_by_day,
     ):
         return False, "stale"
     return True, None
@@ -244,6 +245,7 @@ def select_card(
                 stale_trading_hours=cfg.stale_trading_hours,
                 trading_days=cfg.trading_days,
                 trading_window=cfg.trading_window,
+                trading_window_by_day=cfg.trading_window_by_day,
             ):
                 stale = True
                 stale_since = prev.posted_at

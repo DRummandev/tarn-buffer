@@ -23,6 +23,7 @@ from .info4iq import parse_info4iq
 from .iraqsm import parse_iraqsm
 from .kifah import parse_kifah_page
 from .model import Row, SourceShapeError
+from .ohlc import write_ohlc
 from .outputs import (
     SOURCE_LABELS,
     append_history_if_changed,
@@ -398,6 +399,7 @@ def run_pipeline(
     wrote_latest = False
     wrote_history = False
     wrote_status = False
+    wrote_ohlc = False
     post_check_failed = False
     validation_error: Optional[str] = None
 
@@ -436,6 +438,20 @@ def run_pipeline(
         # Always materialise status in dry-out for the artifact
         write_json(write_status, status, pretty=True)
 
+    # OHLC: rebuild from history when latest/history changed, or in dry-run.
+    # write_ohlc ignores updated_at-only churn so cron does not spam empty commits.
+    if not post_check_failed and (changed_latest or wrote_history or dry_run):
+        if dry_run:
+            if not any(write_history.glob("????-??-??.jsonl")):
+                _copy_history_seed(history_dir, write_history)
+            hist_for_ohlc = write_history
+        else:
+            hist_for_ohlc = history_dir
+        try:
+            wrote_ohlc = write_ohlc(hist_for_ohlc, now=now)
+        except OSError:
+            wrote_ohlc = False
+
     table = decision_table_markdown(
         baghdad=baghdad_dec,
         cards=cards,
@@ -457,6 +473,7 @@ def run_pipeline(
         "wrote_latest": wrote_latest,
         "wrote_history": wrote_history,
         "wrote_status": wrote_status,
+        "wrote_ohlc": wrote_ohlc,
         "post_check_failed": post_check_failed,
         "validation_error": validation_error,
         "decision": baghdad_dec.decision,
@@ -471,6 +488,20 @@ def run_pipeline(
         "by_source": by_source,
     }
     return result
+
+
+def _copy_history_seed(src: Path, dest: Path) -> None:
+    """Copy existing day jsonl + index into dest when dry-out history is empty."""
+    import shutil
+
+    if not src.exists():
+        return
+    dest.mkdir(parents=True, exist_ok=True)
+    for p in src.glob("????-??-??.jsonl"):
+        shutil.copy2(p, dest / p.name)
+    idx = src / "index.json"
+    if idx.exists():
+        shutil.copy2(idx, dest / "index.json")
 
 
 def _primary_newest_row(sid: str, rows: list[Row]) -> Optional[Row]:

@@ -194,6 +194,13 @@ class TestDecideAlerts(unittest.TestCase):
         self.assertEqual(len(opens), 1)
         self.assertEqual(opens[0].title, TITLE_PRIMARY_FAILING)
 
+    def test_saturday_market_window(self):
+        # Sat 10:00–12:30 open; before/after closed; Friday always closed
+        self.assertTrue(is_market_time(_dt("2026-11-28T11:00:00+03:00")))
+        self.assertFalse(is_market_time(_dt("2026-11-28T09:59:00+03:00")))
+        self.assertFalse(is_market_time(_dt("2026-11-28T12:30:00+03:00")))
+        self.assertFalse(is_market_time(_dt("2026-11-27T11:00:00+03:00")))  # Friday
+
     def test_weekend_stale_no_alert(self):
         # Friday afternoon: outside trading days; sources ok but no candidate (stale)
         now = _dt("2026-11-27T14:00:00+03:00")  # Friday
